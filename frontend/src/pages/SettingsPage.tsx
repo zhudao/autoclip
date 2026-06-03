@@ -576,7 +576,7 @@ const SettingsPage: React.FC = () => {
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                 <div style={{ marginBottom: '24px' }}>
                   <UserOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '16px' }} />
-                  <Title level={3} style={{ color: '#ffffff', margin: '0 0 8px 0' }}>
+                  <Title level={3} style={{ color: 'var(--ac-ink)', margin: '0 0 8px 0' }}>
                     B站账号管理
                   </Title>
                   <Text type="secondary" style={{ color: '#b0b0b0', fontSize: '16px' }}>
@@ -605,7 +605,7 @@ const SettingsPage: React.FC = () => {
                 </Space>
                 
                 <div style={{ marginTop: '32px', textAlign: 'left', maxWidth: '600px', margin: '32px auto 0' }}>
-                  <Title level={4} style={{ color: '#ffffff', marginBottom: '16px' }}>
+                  <Title level={4} style={{ color: 'var(--ac-ink)', marginBottom: '16px' }}>
                     功能特点
                   </Title>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
@@ -743,7 +743,7 @@ const AppSettings: React.FC = () => {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                   <PoweroffOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
-                  <Text strong style={{ color: '#ffffff' }}>开机自动启动</Text>
+                  <Text strong style={{ color: 'var(--ac-ink)' }}>开机自动启动</Text>
                 </div>
                 <Text type="secondary" style={{ color: '#b0b0b0' }}>
                   启用后，应用将在系统启动时自动运行

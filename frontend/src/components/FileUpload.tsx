@@ -233,7 +233,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
           padding: '24px 16px',
           textAlign: 'center',
           marginBottom: '16px',
-          background: isDragActive ? 'rgba(79, 172, 254, 0.15)' : 'rgba(38, 38, 38, 0.6)',
+          background: isDragActive ? 'rgba(79, 172, 254, 0.15)' : 'var(--ac-line-2)',
           border: `2px dashed ${isDragActive ? '#4facfe' : 'rgba(79, 172, 254, 0.3)'}`,
           borderRadius: '16px',
           cursor: 'pointer',
@@ -270,7 +270,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
           }}>
             {isDragActive ? '松开鼠标导入文件' : '点击或拖拽文件到此区域'}
           </Text>
-          <Text style={{ color: '#cccccc', fontSize: '14px', lineHeight: '1.5' }}>
+          <Text style={{ color: 'var(--ac-sub)', fontSize: '14px', lineHeight: '1.5' }}>
             支持 MP4、AVI、MOV、MKV、WebM 格式，<Text style={{ color: '#52c41a', fontWeight: 600 }}>可选择导入字幕文件(.srt)或使用AI自动生成</Text>
           </Text>
         </div>
@@ -290,7 +290,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
               height: '40px',
               borderRadius: '12px',
               fontSize: '14px',
-              background: 'rgba(38, 38, 38, 0.8)',
+              background: 'var(--ac-line-2)',
               border: '1px solid rgba(79, 172, 254, 0.3)',
               color: '#ffffff'
             }}
@@ -323,10 +323,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
                     borderRadius: '6px',
                     border: isSelected 
                       ? `2px solid ${category.color}` 
-                      : '2px solid rgba(255, 255, 255, 0.1)',
+                      : '2px solid var(--ac-line)',
                     background: isSelected 
                       ? `${category.color}25` 
-                      : 'rgba(255, 255, 255, 0.05)',
+                      : 'var(--ac-line)',
                     color: isSelected ? '#ffffff' : 'rgba(255, 255, 255, 0.8)',
                     boxShadow: isSelected 
                       ? `0 0 12px ${category.color}40` 
@@ -339,14 +339,14 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected) {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                      e.currentTarget.style.background = 'var(--ac-line)'
                       e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isSelected) {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+                      e.currentTarget.style.background = 'var(--ac-line)'
+                      e.currentTarget.style.borderColor = 'var(--ac-line)'
                     }
                   }}
                 >
@@ -372,7 +372,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
                 alignItems: 'center', 
                 justifyContent: 'space-between',
                 padding: '16px',
-                background: 'rgba(38, 38, 38, 0.8)',
+                background: 'var(--ac-line-2)',
                 borderRadius: '12px',
                 border: '1px solid rgba(79, 172, 254, 0.2)',
                 backdropFilter: 'blur(10px)'
@@ -394,7 +394,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
                     <Text style={{ color: '#ffffff', fontWeight: 600, display: 'block', fontSize: '14px' }}>
                       {files.video.name}
                     </Text>
-                    <Text style={{ color: '#cccccc', fontSize: '13px' }}>
+                    <Text style={{ color: 'var(--ac-sub)', fontSize: '13px' }}>
                       {(files.video.size / 1024 / 1024).toFixed(2)} MB
                     </Text>
                   </div>
@@ -420,7 +420,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
                 alignItems: 'center', 
                 justifyContent: 'space-between',
                 padding: '16px',
-                background: 'rgba(38, 38, 38, 0.8)',
+                background: 'var(--ac-line-2)',
                 borderRadius: '12px',
                 border: '1px solid rgba(82, 196, 26, 0.3)',
                 backdropFilter: 'blur(10px)'
@@ -442,7 +442,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
                     <Text style={{ color: '#ffffff', fontWeight: 600, display: 'block', fontSize: '14px' }}>
                       {files.srt.name}
                     </Text>
-                    <Text style={{ color: '#cccccc', fontSize: '13px' }}>
+                    <Text style={{ color: 'var(--ac-sub)', fontSize: '13px' }}>
                       字幕文件
                     </Text>
                   </div>
@@ -490,7 +490,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
         <div style={{ 
           marginBottom: '16px',
           padding: '20px',
-          background: 'rgba(38, 38, 38, 0.8)',
+          background: 'var(--ac-line-2)',
           borderRadius: '16px',
           border: '1px solid rgba(79, 172, 254, 0.3)',
           backdropFilter: 'blur(10px)'
@@ -508,12 +508,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
               '0%': '#4facfe',
               '100%': '#00f2fe',
             }}
-            trailColor="#404040"
+            trailColor="var(--ac-line)"
             strokeWidth={6}
             showInfo={false}
             style={{ marginBottom: '8px' }}
           />
-          <Text style={{ color: '#cccccc', fontSize: '13px', marginTop: '8px', display: 'block', textAlign: 'center' }}>
+          <Text style={{ color: 'var(--ac-sub)', fontSize: '13px', marginTop: '8px', display: 'block', textAlign: 'center' }}>
             正在导入文件，请稍候...
           </Text>
         </div>

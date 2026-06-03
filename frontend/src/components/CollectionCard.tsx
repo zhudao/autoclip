@@ -56,8 +56,8 @@ const CollectionCard: React.FC<CollectionCardProps> = ({
         width: '320px',
         height: '380px',
         borderRadius: '16px',
-        border: '1px solid #303030',
-        background: 'linear-gradient(135deg, #1f1f1f 0%, #2a2a2a 100%)',
+        border: '1px solid var(--ac-line)',
+        background: 'var(--ac-card)',
         overflow: 'hidden',
         cursor: 'pointer',
         flexShrink: 0
@@ -72,7 +72,7 @@ const CollectionCard: React.FC<CollectionCardProps> = ({
           style={{ 
             height: '200px', 
             background: imgError || !collection.thumbnail_path
-              ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+              ? 'var(--ac-thumb)'
               : 'transparent',
             display: 'flex',
             alignItems: 'center',
@@ -117,20 +117,18 @@ const CollectionCard: React.FC<CollectionCardProps> = ({
               position: 'absolute',
               top: '12px',
               right: '12px',
-              background: collection.collection_type === 'ai_recommended' 
-                ? 'linear-gradient(45deg, #1890ff, #36cfc9)' 
-                : 'linear-gradient(45deg, #722ed1, #eb2f96)',
-              color: 'white',
-              padding: '4px 8px',
-              borderRadius: '8px',
+              background: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(6px)',
+              color: 'rgba(255,255,255,0.95)',
+              padding: '4px 9px',
+              borderRadius: '999px',
               fontSize: '12px',
-              fontWeight: 500,
               display: 'flex',
               alignItems: 'center',
               gap: '4px'
             }}
           >
-            {collection.collection_type === 'ai_recommended' ? 'AI推荐' : '手动创建'}
+            {collection.collection_type === 'ai_recommended' ? 'AI 推荐' : '手动创建'}
           </div>
           
           {/* 左下角片段数量 */}
@@ -209,7 +207,7 @@ const CollectionCard: React.FC<CollectionCardProps> = ({
                 fontSize: '16px',
                 fontWeight: 600,
                 lineHeight: '1.4',
-                color: '#ffffff',
+                color: 'var(--ac-ink)',
                 width: '100%',
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
@@ -241,7 +239,7 @@ const CollectionCard: React.FC<CollectionCardProps> = ({
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
                   lineHeight: '1.5',
-                  color: '#b0b0b0',
+                  color: 'var(--ac-sub)',
                   cursor: 'pointer',
                   wordBreak: 'break-word',
                   textOverflow: 'ellipsis',
@@ -268,13 +266,13 @@ const CollectionCard: React.FC<CollectionCardProps> = ({
             icon={<PlayCircleOutlined />}
             onClick={() => onView(collection)}
             style={{
-              color: '#4facfe',
-              border: '1px solid rgba(79, 172, 254, 0.3)',
+              color: 'var(--ac-ink)',
+              border: '1px solid var(--ac-line)',
               borderRadius: '6px',
               fontSize: '12px',
               height: '28px',
               padding: '0 12px',
-              background: 'rgba(79, 172, 254, 0.1)'
+              background: 'transparent'
             }}
           >
             播放
@@ -286,13 +284,13 @@ const CollectionCard: React.FC<CollectionCardProps> = ({
               icon={<DownloadOutlined />}
               onClick={() => onGenerateVideo(collection.id)}
               style={{
-                color: '#52c41a',
-                border: '1px solid rgba(82, 196, 26, 0.3)',
+                color: 'var(--ac-sub)',
+                border: '1px solid var(--ac-line)',
                 borderRadius: '6px',
                 fontSize: '12px',
                 height: '28px',
                 padding: '0 12px',
-                background: 'rgba(82, 196, 26, 0.1)'
+                background: 'transparent'
               }}
             >
               下载
@@ -304,13 +302,13 @@ const CollectionCard: React.FC<CollectionCardProps> = ({
             icon={<EditOutlined />}
             onClick={() => message.info('开发中，敬请期待', 3)}
             style={{
-              color: '#ff7875',
-              border: '1px solid rgba(255, 120, 117, 0.3)',
+              color: 'var(--ac-sub)',
+              border: '1px solid var(--ac-line)',
               borderRadius: '6px',
               fontSize: '12px',
               height: '28px',
               padding: '0 12px',
-              background: 'rgba(255, 120, 117, 0.1)'
+              background: 'transparent'
             }}
           >
             投稿

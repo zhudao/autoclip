@@ -293,7 +293,7 @@ const ProjectDetailPage: React.FC = () => {
                   onClick={() => setShowCreateCollection(true)}
                   style={{
                     borderRadius: '8px',
-                    background: 'linear-gradient(45deg, #1890ff, #36cfc9)',
+                    background: 'var(--ac-accent)',
                     border: 'none',
                     fontWeight: 500,
                     height: '40px',
@@ -352,13 +352,13 @@ const ProjectDetailPage: React.FC = () => {
             style={{
               borderRadius: '16px',
               border: '1px solid #303030',
-              background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'
+              background: 'var(--ac-card)'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
                 <Title level={4} style={{ margin: 0, color: '#ffffff', fontWeight: 600 }}>视频片段</Title>
-                <Text type="secondary" style={{ color: '#b0b0b0', fontSize: '14px' }}>
+                <Text type="secondary" style={{ color: 'var(--ac-sub)', fontSize: '14px' }}>
                   AI 已为您生成了 {currentProject.clips?.length || 0} 个精彩片段
                 </Text>
               </div>
@@ -366,7 +366,7 @@ const ProjectDetailPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 {/* 排序控件 - 暗黑主题优化 */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Text style={{ fontSize: '13px', color: '#b0b0b0', fontWeight: 500 }}>排序</Text>
+                  <Text style={{ fontSize: '13px', color: 'var(--ac-sub)', fontWeight: 500 }}>排序</Text>
                   <Radio.Group
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
@@ -375,7 +375,7 @@ const ProjectDetailPage: React.FC = () => {
                     style={{
                       ['--ant-radio-button-bg' as string]: 'transparent',
                       ['--ant-radio-button-checked-bg' as string]: '#1890ff',
-                      ['--ant-radio-button-color' as string]: '#b0b0b0',
+                      ['--ant-radio-button-color' as string]: 'var(--ac-sub)',
                       ['--ant-radio-button-checked-color' as string]: '#ffffff'
                     }}
                   >
@@ -386,9 +386,9 @@ const ProjectDetailPage: React.FC = () => {
                          height: '32px',
                          lineHeight: '30px',
                          padding: '0 16px',
-                         background: sortBy === 'time' ? 'linear-gradient(45deg, #1890ff, #36cfc9)' : 'rgba(255,255,255,0.08)',
-                         border: sortBy === 'time' ? '1px solid #1890ff' : '1px solid #404040',
-                         color: sortBy === 'time' ? '#ffffff' : '#b0b0b0',
+                         background: sortBy === 'time' ? 'var(--ac-cta-bg)' : 'var(--ac-line)',
+                         border: sortBy === 'time' ? '1px solid #1890ff' : '1px solid var(--ac-line)',
+                         color: sortBy === 'time' ? '#ffffff' : 'var(--ac-sub)',
                          borderRadius: '6px 0 0 6px',
                          fontWeight: sortBy === 'time' ? 600 : 400,
                          boxShadow: sortBy === 'time' ? '0 2px 8px rgba(24, 144, 255, 0.3)' : 'none',
@@ -404,10 +404,10 @@ const ProjectDetailPage: React.FC = () => {
                          height: '32px',
                          lineHeight: '30px',
                          padding: '0 16px',
-                         background: sortBy === 'score' ? 'linear-gradient(45deg, #1890ff, #36cfc9)' : 'rgba(255,255,255,0.08)',
-                         border: sortBy === 'score' ? '1px solid #1890ff' : '1px solid #404040',
+                         background: sortBy === 'score' ? 'var(--ac-cta-bg)' : 'var(--ac-line)',
+                         border: sortBy === 'score' ? '1px solid #1890ff' : '1px solid var(--ac-line)',
                          borderLeft: 'none',
-                         color: sortBy === 'score' ? '#ffffff' : '#b0b0b0',
+                         color: sortBy === 'score' ? '#ffffff' : 'var(--ac-sub)',
                          borderRadius: '0 6px 6px 0',
                          fontWeight: sortBy === 'score' ? 600 : 400,
                          boxShadow: sortBy === 'score' ? '0 2px 8px rgba(24, 144, 255, 0.3)' : 'none',
@@ -427,7 +427,7 @@ const ProjectDetailPage: React.FC = () => {
                       onClick={() => setShowCreateCollection(true)}
                       style={{
                         borderRadius: '8px',
-                        background: 'linear-gradient(45deg, #1890ff, #36cfc9)',
+                        background: 'var(--ac-accent)',
                         border: 'none',
                         fontWeight: 500,
                         height: '40px',
@@ -477,9 +477,9 @@ const ProjectDetailPage: React.FC = () => {
               <div style={{ 
                 padding: '60px 0',
                 textAlign: 'center',
-                background: 'rgba(255,255,255,0.02)',
+                background: 'var(--ac-line)',
                 borderRadius: '12px',
-                border: '1px dashed #404040'
+                border: '1px dashed var(--ac-line)'
               }}>
                 <Empty 
                   description={

@@ -243,10 +243,10 @@ const CollectionPreviewModal: React.FC<CollectionPreviewModalProps> = ({
         {/* 头部标题栏 */}
         <div className="preview-header">
           <div className="header-left">
-            <Title level={4} style={{ margin: 0, color: 'white', display: 'inline-block', marginRight: '12px' }}>
+            <Title level={4} style={{ margin: 0, color: 'var(--ac-ink)', display: 'inline-block', marginRight: '12px' }}>
               {latestCollection.collection_title}
             </Title>
-            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px' }}>
+            <Text style={{ color: 'var(--ac-sub)', fontSize: '13px' }}>
               ({collectionClips.length} 个切片)
             </Text>
           </div>
@@ -277,7 +277,7 @@ const CollectionPreviewModal: React.FC<CollectionPreviewModalProps> = ({
                   <Button 
                     type="text" 
                     icon={<DeleteOutlined />}
-                    style={{ color: 'white' }}
+                    style={{ color: 'var(--ac-error)' }}
                   >
                     删除
                   </Button>
@@ -287,7 +287,13 @@ const CollectionPreviewModal: React.FC<CollectionPreviewModalProps> = ({
                 type="text" 
                 icon={<CloseOutlined />} 
                 onClick={onClose}
-                style={{ color: 'white' }}
+                aria-label="关闭合集预览"
+                title="关闭"
+                style={{
+                  color: 'var(--ac-ink)',
+                  border: '1px solid var(--ac-line)',
+                  background: 'var(--ac-card)',
+                }}
               />
             </Space>
           </div>
@@ -333,24 +339,24 @@ const CollectionPreviewModal: React.FC<CollectionPreviewModalProps> = ({
                               // 这里可以触发父组件的更新回调
                               console.log('标题已更新:', newTitle)
                             }}
-                            style={{ color: '#ffffff', fontSize: '16px', fontWeight: '500' }}
+                            style={{ color: 'var(--ac-ink)', fontSize: '16px', fontWeight: '500' }}
                           />
                         </div>
                         <div className="video-meta">
-                          <Tag color="blue">{formatDuration(currentClip)}</Tag>
-                          <Tag 
+                          <Tag style={{ background: 'var(--ac-line-2)', color: 'var(--ac-sub)', border: '1px solid var(--ac-line)', borderRadius: '6px' }}>
+                            <span className="ac-mono">{formatDuration(currentClip)}</span>
+                          </Tag>
+                          <Tag
                             style={{
-                              background: currentClip.final_score >= 0.9 ? '#52c41a' : 
-                                           currentClip.final_score >= 0.8 ? '#1890ff' : 
-                                           currentClip.final_score >= 0.7 ? '#faad14' : 
-                                           currentClip.final_score >= 0.6 ? '#ff7a45' : '#ff4d4f',
-                              color: 'white',
-                              border: 'none'
+                              background: 'var(--ac-line-2)',
+                              color: 'var(--ac-ink)',
+                              border: '1px solid var(--ac-line)',
+                              borderRadius: '6px'
                             }}
                           >
-                            分数: {(currentClip.final_score * 100).toFixed(0)}
+                            <span className="ac-mono">{(currentClip.final_score * 100).toFixed(0)}</span> 分
                           </Tag>
-                          <Text style={{ color: '#999', marginLeft: 8 }}>
+                          <Text style={{ color: 'var(--ac-muted)', marginLeft: 8 }}>
                             {currentClipIndex + 1} / {collectionClips.length}
                           </Text>
                         </div>
@@ -396,8 +402,8 @@ const CollectionPreviewModal: React.FC<CollectionPreviewModalProps> = ({
                       onClick={() => setShowAddClipModal(true)}
                       disabled={isUpdating}
                       style={{
-                        borderRadius: '8px',
-                        background: 'linear-gradient(45deg, #1890ff, #36cfc9)',
+                        borderRadius: '999px',
+                        background: 'var(--ac-cta-bg)',
                         border: 'none',
                         fontWeight: 500,
                         height: '36px',
@@ -447,18 +453,15 @@ const CollectionPreviewModal: React.FC<CollectionPreviewModalProps> = ({
                                       <Text type="secondary">
                                         {formatDuration(clip)}
                                       </Text>
-                                      <span style={{
-                                        background: clip.final_score >= 0.9 ? '#52c41a' : 
-                                                   clip.final_score >= 0.8 ? '#1890ff' : 
-                                                   clip.final_score >= 0.7 ? '#faad14' : 
-                                                   clip.final_score >= 0.6 ? '#ff7a45' : '#ff4d4f',
-                                        color: 'white',
+                                      <span className="ac-mono" style={{
+                                        background: 'var(--ac-line-2)',
+                                        color: 'var(--ac-ink)',
+                                        border: '1px solid var(--ac-line)',
                                         padding: '2px 6px',
-                                        borderRadius: '4px',
-                                        fontSize: '11px',
-                                        fontWeight: 'bold'
+                                        borderRadius: '6px',
+                                        fontSize: '11px'
                                       }}>
-                                        分数: {(clip.final_score * 100).toFixed(0)}
+                                        {(clip.final_score * 100).toFixed(0)} 分
                                       </span>
                                     </div>
                                   </div>

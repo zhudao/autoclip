@@ -312,7 +312,7 @@ const BilibiliDownload: React.FC<BilibiliDownloadProps> = ({ onDownloadSuccess }
                 }
               }}
               style={{
-                background: 'rgba(38, 38, 38, 0.8)',
+                background: 'var(--ac-line-2)',
                 border: '1px solid rgba(79, 172, 254, 0.3)',
                 borderRadius: '8px',
                 color: '#ffffff',
@@ -379,7 +379,7 @@ const BilibiliDownload: React.FC<BilibiliDownloadProps> = ({ onDownloadSuccess }
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                   style={{
-                    background: 'rgba(38, 38, 38, 0.8)',
+                    background: 'var(--ac-line-2)',
                     border: '1px solid rgba(79, 172, 254, 0.3)',
                     borderRadius: '12px',
                     color: '#ffffff',
@@ -402,7 +402,7 @@ const BilibiliDownload: React.FC<BilibiliDownloadProps> = ({ onDownloadSuccess }
                     height: '48px'
                   }}
                   dropdownStyle={{
-                    background: 'rgba(38, 38, 38, 0.95)',
+                    background: 'var(--ac-line-2)',
                     border: '1px solid rgba(79, 172, 254, 0.3)',
                     borderRadius: '12px'
                   }}
@@ -442,10 +442,10 @@ const BilibiliDownload: React.FC<BilibiliDownloadProps> = ({ onDownloadSuccess }
                             borderRadius: '6px',
                             border: isSelected 
                               ? `2px solid ${category.color}` 
-                              : '2px solid rgba(255, 255, 255, 0.1)',
+                              : '2px solid var(--ac-line)',
                             background: isSelected 
                               ? `${category.color}25` 
-                              : 'rgba(255, 255, 255, 0.05)',
+                              : 'var(--ac-line)',
                             color: isSelected ? '#ffffff' : 'rgba(255, 255, 255, 0.8)',
                             boxShadow: isSelected 
                               ? `0 0 12px ${category.color}40` 
@@ -458,14 +458,14 @@ const BilibiliDownload: React.FC<BilibiliDownloadProps> = ({ onDownloadSuccess }
                           }}
                           onMouseEnter={(e) => {
                             if (!isSelected) {
-                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                              e.currentTarget.style.background = 'var(--ac-line)'
                               e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
                             }
                           }}
                           onMouseLeave={(e) => {
                             if (!isSelected) {
-                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+                              e.currentTarget.style.background = 'var(--ac-line)'
+                              e.currentTarget.style.borderColor = 'var(--ac-line)'
                             }
                           }}
                         >
@@ -512,7 +512,7 @@ const BilibiliDownload: React.FC<BilibiliDownloadProps> = ({ onDownloadSuccess }
               onClick={stopDownload}
               size="large"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--ac-line)',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
                 color: '#ffffff',
                 borderRadius: '12px',
@@ -531,7 +531,7 @@ const BilibiliDownload: React.FC<BilibiliDownloadProps> = ({ onDownloadSuccess }
       {currentTask && (
         <Card
           style={{
-            background: 'rgba(38, 38, 38, 0.8)',
+            background: 'var(--ac-line-2)',
             border: '1px solid rgba(79, 172, 254, 0.3)',
             borderRadius: '12px',
             marginTop: '16px',
@@ -553,8 +553,8 @@ const BilibiliDownload: React.FC<BilibiliDownloadProps> = ({ onDownloadSuccess }
           
           <div style={{ marginBottom: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <Text style={{ color: '#cccccc', fontSize: '14px' }}>状态: {currentTask.status}</Text>
-              <Text style={{ color: '#cccccc', fontSize: '14px' }}>{Math.round(currentTask.progress)}%</Text>
+              <Text style={{ color: 'var(--ac-sub)', fontSize: '14px' }}>状态: {currentTask.status}</Text>
+              <Text style={{ color: 'var(--ac-sub)', fontSize: '14px' }}>{Math.round(currentTask.progress)}%</Text>
             </div>
             
             <Progress
@@ -564,7 +564,7 @@ const BilibiliDownload: React.FC<BilibiliDownloadProps> = ({ onDownloadSuccess }
                 '0%': '#4facfe',
                 '100%': '#00f2fe'
               }}
-              trailColor="rgba(255, 255, 255, 0.1)"
+              trailColor="var(--ac-line)"
               strokeWidth={8}
               showInfo={false}
             />

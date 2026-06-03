@@ -124,12 +124,12 @@ const HomePage: React.FC = () => {
     })
 
   return (
-    <Layout style={{ 
-      minHeight: '100vh', 
-      background: '#0f0f0f'
+    <Layout style={{
+      minHeight: '100vh',
+      background: 'var(--ac-bg)'
     }}>
-      <Content style={{ padding: '40px 24px', position: 'relative' }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', position: 'relative' }}>
+      <Content style={{ padding: '40px 56px 56px', position: 'relative' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative' }}>
           {/* 文件上传区域 */}
           <div style={{ 
             marginBottom: '48px',
@@ -137,57 +137,59 @@ const HomePage: React.FC = () => {
             display: 'flex',
             justifyContent: 'center'
           }}>
-            <div style={{
-              width: '100%',
-              maxWidth: '800px',
-              background: 'rgba(26, 26, 26, 0.8)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: '16px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              padding: '20px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-            }}>
-              {/* 标签页切换 */}
+            <div style={{ width: '100%', maxWidth: '820px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--ac-muted)', margin: '0 4px 14px', letterSpacing: '0.2px' }}>
+                粘贴链接，AI 自动切片
+              </div>
               <div style={{
-                display: 'flex',
-                marginBottom: '16px',
-                borderRadius: '8px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                padding: '3px'
+                background: 'var(--ac-card)',
+                borderRadius: '16px',
+                border: '1px solid var(--ac-line)',
+                padding: '18px',
+                boxShadow: 'var(--ac-shadow)'
               }}>
-                 <button 
+              {/* 标签页切换 — 胶囊分段 */}
+              <div style={{
+                display: 'inline-flex',
+                marginBottom: '14px',
+                borderRadius: '999px',
+                background: 'var(--ac-line-2)',
+                padding: '3px',
+                gap: '2px'
+              }}>
+                 <button
                    style={{
-                     flex: 1,
-                     padding: '12px 24px',
-                     borderRadius: '8px',
-                     background: activeTab === 'bilibili' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                     color: activeTab === 'bilibili' ? '#ffffff' : '#cccccc',
+                     padding: '8px 18px',
+                     borderRadius: '999px',
+                     background: activeTab === 'bilibili' ? 'var(--ac-card)' : 'transparent',
+                     color: activeTab === 'bilibili' ? 'var(--ac-ink)' : 'var(--ac-sub)',
                      cursor: 'pointer',
-                     fontSize: '16px',
-                     fontWeight: 600,
-                     transition: 'all 0.3s ease',
-                     border: activeTab === 'bilibili' ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid transparent'
+                     fontSize: '14px',
+                     fontWeight: 500,
+                     transition: 'all 0.2s ease',
+                     border: 'none',
+                     boxShadow: activeTab === 'bilibili' ? '0 1px 2px rgba(0,0,0,.08)' : 'none'
                    }}
                    onClick={() => setActiveTab('bilibili')}
                  >
-                   📺 链接导入
+                   链接导入
                  </button>
-                <button 
+                <button
                    style={{
-                     flex: 1,
-                     padding: '12px 24px',
-                     borderRadius: '8px',
-                     background: activeTab === 'upload' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                     color: activeTab === 'upload' ? '#ffffff' : '#cccccc',
+                     padding: '8px 18px',
+                     borderRadius: '999px',
+                     background: activeTab === 'upload' ? 'var(--ac-card)' : 'transparent',
+                     color: activeTab === 'upload' ? 'var(--ac-ink)' : 'var(--ac-sub)',
                      cursor: 'pointer',
-                     fontSize: '16px',
-                     fontWeight: 600,
-                     transition: 'all 0.3s ease',
-                     border: activeTab === 'upload' ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid transparent'
+                     fontSize: '14px',
+                     fontWeight: 500,
+                     transition: 'all 0.2s ease',
+                     border: 'none',
+                     boxShadow: activeTab === 'upload' ? '0 1px 2px rgba(0,0,0,.08)' : 'none'
                    }}
                    onClick={() => setActiveTab('upload')}
                  >
-                   📁 文件导入
+                   文件导入
                  </button>
               </div>
               
@@ -208,55 +210,34 @@ const HomePage: React.FC = () => {
                   }} />
                 )}
               </div>
+              </div>
             </div>
           </div>
 
           {/* 项目管理区域 */}
           <div style={{
-            background: 'rgba(26, 26, 26, 0.7)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            padding: '32px',
-            marginBottom: '32px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.03)'
+            background: 'transparent',
+            padding: '0',
+            marginBottom: '32px'
           }}>
             {/* 项目列表标题区域 */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '24px',
-              paddingBottom: '16px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              marginTop: '56px',
+              marginBottom: '22px'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <Title 
-                  level={2} 
-                  style={{ 
-                    margin: 0,
-                    color: '#ffffff',
-                    fontSize: '24px',
-                    fontWeight: 600,
-                    background: 'linear-gradient(135deg, #ffffff 0%, #cccccc 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text'
-                  }}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                <Title
+                  level={2}
+                  style={{ margin: 0, color: 'var(--ac-ink)', fontSize: '16px', fontWeight: 600 }}
                 >
                   我的项目
                 </Title>
-                <div style={{
-                  padding: '8px 16px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: '20px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)'
-                }}>
-                  <Text style={{ color: '#ffffff', fontWeight: 600, fontSize: '14px' }}>
-                    共 {filteredProjects.length} 个项目
-                  </Text>
-                </div>
+                <Text style={{ color: 'var(--ac-muted)', fontSize: '13px' }}>
+                  {filteredProjects.length}
+                </Text>
               </div>
               
               {/* 状态筛选移到右侧 */}
@@ -265,44 +246,18 @@ const HomePage: React.FC = () => {
                 alignItems: 'center'
               }}>
                 <Select
-                  placeholder="选择状态"
+                  placeholder="全部状态"
                   value={statusFilter}
                   onChange={setStatusFilter}
-                  style={{ 
-                    minWidth: '140px',
-                    height: '36px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '8px',
-                    color: '#ffffff',
-                    fontSize: '14px'
-                  }}
-                  styles={{
-                    popup: {
-                      root: {
-                        background: 'rgba(26, 26, 26, 0.95)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '8px',
-                        backdropFilter: 'blur(20px)',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
-                      }
-                    }
-                  }}
-                  suffixIcon={
-                    <span style={{ 
-                      color: '#8c8c8c', 
-                      fontSize: '10px',
-                      transition: 'all 0.2s ease'
-                    }}>
-                      ⌄
-                    </span>
-                  }
+                  variant="borderless"
+                  style={{ minWidth: '120px', fontSize: '13px' }}
+                  suffixIcon={<span style={{ color: 'var(--ac-muted)', fontSize: '10px' }}>⌄</span>}
                   allowClear
                 >
-                  <Option value="all" style={{ color: '#ffffff' }}>全部状态</Option>
-                  <Option value="completed" style={{ color: '#52c41a' }}>已完成</Option>
-                  <Option value="processing" style={{ color: '#1890ff' }}>处理中</Option>
-                  <Option value="error" style={{ color: '#ff4d4f' }}>处理失败</Option>
+                  <Option value="all">全部状态</Option>
+                  <Option value="completed">已完成</Option>
+                  <Option value="processing">处理中</Option>
+                  <Option value="error">处理失败</Option>
                 </Select>
               </div>
             </div>
@@ -310,29 +265,25 @@ const HomePage: React.FC = () => {
             {/* 项目列表内容 */}
              <div>
                {loading ? (
-                 <div style={{ 
-                   textAlign: 'center', 
-                   padding: '60px 0',
-                   background: '#262626',
-                   borderRadius: '12px',
-                   border: '1px solid #404040'
+                 <div style={{
+                   textAlign: 'center',
+                   padding: '72px 0',
+                   background: 'var(--ac-card)',
+                   borderRadius: '16px',
+                   border: '1px solid var(--ac-line)'
                  }}>
                    <Spin size="large" />
-                   <div style={{ 
-                     marginTop: '20px', 
-                     color: '#cccccc',
-                     fontSize: '16px'
-                   }}>
-                     正在加载项目列表...
+                   <div style={{ marginTop: '18px', color: 'var(--ac-muted)', fontSize: '14px' }}>
+                     正在加载项目列表…
                    </div>
                  </div>
                ) : filteredProjects.length === 0 ? (
                  <div style={{
                    textAlign: 'center',
-                   padding: '60px 0',
-                   background: '#262626',
-                   borderRadius: '12px',
-                   border: '1px solid #404040'
+                   padding: '72px 0',
+                   background: 'var(--ac-card)',
+                   borderRadius: '16px',
+                   border: '1px solid var(--ac-line)'
                  }}>
                    <Empty
                      image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -348,10 +299,9 @@ const HomePage: React.FC = () => {
                ) : (
                  <div style={{
                    display: 'grid',
-                   gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                   gap: '16px',
-                   justifyContent: 'start',
-                   padding: '6px 0'
+                   gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                   gap: '24px',
+                   justifyContent: 'start'
                  }}>
                    {filteredProjects.map((project: Project) => (
                      <div key={project.id} style={{ position: 'relative', zIndex: 1 }}>

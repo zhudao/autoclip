@@ -1,102 +1,90 @@
 import React from 'react'
 import { Layout, Button } from 'antd'
-import { SettingOutlined, HomeOutlined } from '@ant-design/icons'
+import { SettingOutlined, ArrowLeftOutlined, BulbOutlined, MoonOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTheme } from '../context/ThemeContext'
 
 const { Header: AntHeader } = Layout
 
+// Calm Premium header — see DESIGN.md
 const Header: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const isHomePage = location.pathname === '/'
+  const { theme, toggleTheme } = useTheme()
 
   return (
-    <AntHeader 
-      className="glass-effect"
-      style={{ 
-        padding: '0 32px',
+    <AntHeader
+      style={{
+        padding: '0 56px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: '72px',
+        height: '64px',
         position: 'sticky',
         top: 0,
         zIndex: 1000,
-        backdropFilter: 'blur(20px)',
-        background: 'rgba(26, 26, 26, 0.9)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+        backdropFilter: 'blur(10px)',
+        background: 'color-mix(in srgb, var(--ac-bg) 78%, transparent)',
+        borderBottom: '1px solid var(--ac-line-2)',
       }}
     >
-      {/* Logo */}
-      <div 
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          cursor: 'pointer',
-          transition: 'all 0.2s ease'
-        }}
+      {/* Wordmark — serif, italic "Clip" */}
+      <div
+        style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
         onClick={() => navigate('/')}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.05)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)'
-        }}
       >
         <span
           style={{
-            fontSize: '24px',
-            fontWeight: '700',
-            color: '#ffffff',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-            letterSpacing: '-0.5px'
+            fontFamily: 'var(--ac-font-serif)',
+            fontSize: '26px',
+            color: 'var(--ac-ink)',
+            letterSpacing: '0.3px',
           }}
         >
-          AutoClip
+          Auto<em style={{ fontStyle: 'italic' }}>Clip</em>
         </span>
       </div>
-      
-      {/* Navigation Buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {/* 导航按钮 */}
+
+      {/* Right side */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {!isHomePage && (
-          <Button 
+          <Button
             type="text"
-            icon={<HomeOutlined />}
+            icon={<ArrowLeftOutlined />}
             onClick={() => navigate('/')}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              height: '40px',
-              padding: '0 20px',
-              fontWeight: 500,
-              color: '#ffffff'
-            }}
+            style={{ color: 'var(--ac-sub)', height: '36px', borderRadius: '999px' }}
           >
-            返回首页
+            返回
           </Button>
         )}
-        
-        
-        
-        <Button 
-          type="text" 
+        <Button
+          type="text"
+          icon={theme === 'dark' ? <BulbOutlined /> : <MoonOutlined />}
+          onClick={toggleTheme}
+          aria-label={theme === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}
+          title={theme === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}
+          style={{
+            color: 'var(--ac-sub)',
+            border: '1px solid var(--ac-line)',
+            borderRadius: '999px',
+            width: '36px',
+            height: '36px',
+            padding: 0,
+            background: 'var(--ac-card)',
+          }}
+        />
+        <Button
+          type="text"
           icon={<SettingOutlined />}
           onClick={() => navigate('/settings')}
           style={{
-            color: '#cccccc',
-            border: '1px solid transparent',
-            borderRadius: '8px',
-            height: '40px',
-            padding: '0 16px'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#2d2d2d'
-            e.currentTarget.style.borderColor = '#404040'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent'
-            e.currentTarget.style.borderColor = 'transparent'
+            color: 'var(--ac-sub)',
+            border: '1px solid var(--ac-line)',
+            borderRadius: '999px',
+            height: '36px',
+            padding: '0 16px',
+            background: 'var(--ac-card)',
           }}
         >
           设置

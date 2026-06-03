@@ -118,224 +118,42 @@ export const UnifiedStatusBar: React.FC<UnifiedStatusBarProps> = ({
     }
   }, [progress, onStatusChange])
 
-  // 导入中状态
-  if (status === 'importing') {
-    return (
-      <div style={{
-        background: 'rgba(255, 193, 7, 0.1)',
-        border: '1px solid rgba(255, 193, 7, 0.3)',
-        borderRadius: '3px',
-        padding: '3px 6px',
-        textAlign: 'center',
-        width: '100%'
-      }}>
-        <div style={{ 
-          color: '#ffc107',
-          fontSize: '11px', 
-          fontWeight: 600, 
-          lineHeight: '12px'
-        }}>
-          {Math.round(downloadProgress)}%
-        </div>
-        <div style={{ 
-          color: '#999999', 
-          fontSize: '8px', 
-          lineHeight: '9px'
-        }}>
-          导入中
-        </div>
+  // ===== Calm Premium 状态展示（见 DESIGN.md）=====
+  // 进行中：细进度线 + 标签 + 右侧 mono 百分比
+  const ProgressRow = ({ label, percent }: { label: string; percent: number }) => (
+    <div style={{ width: '100%' }}>
+      <div style={{ height: 4, background: 'var(--ac-line)', borderRadius: 999, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${Math.max(0, Math.min(100, percent))}%`, background: 'var(--ac-accent)', borderRadius: 999, transition: 'width .4s ease' }} />
       </div>
-    )
-  }
-
-  // 下载中状态
-  if (status === 'downloading') {
-    return (
-      <div style={{
-        background: 'rgba(24, 144, 255, 0.1)',
-        border: '1px solid rgba(24, 144, 255, 0.3)',
-        borderRadius: '3px',
-        padding: '3px 6px',
-        textAlign: 'center',
-        width: '100%'
-      }}>
-        <div style={{ 
-          color: '#1890ff',
-          fontSize: '11px', 
-          fontWeight: 600, 
-          lineHeight: '12px'
-        }}>
-          {Math.round(currentDownloadProgress)}%
-        </div>
-        <div style={{ 
-          color: '#999999', 
-          fontSize: '8px', 
-          lineHeight: '9px'
-        }}>
-          下载中
-        </div>
-      </div>
-    )
-  }
-
-  // 处理中状态 - 使用新的简化进度系统
-  if (status === 'processing') {
-    if (!progress) {
-      // 等待进度数据
-      return (
-      <div style={{
-        background: 'rgba(82, 196, 26, 0.1)',
-        border: '1px solid rgba(82, 196, 26, 0.3)',
-        borderRadius: '3px',
-        padding: '3px 6px',
-        textAlign: 'center',
-        width: '100%'
-      }}>
-        <div style={{ 
-          color: '#52c41a',
-          fontSize: '11px', 
-          fontWeight: 600, 
-          lineHeight: '12px'
-        }}>
-          0%
-        </div>
-        <div style={{ 
-          color: '#999999', 
-          fontSize: '8px', 
-          lineHeight: '9px'
-        }}>
-          初始化中...
-        </div>
-      </div>
-      )
-    }
-
-    const { stage, percent, message } = progress
-    const stageDisplayName = getStageDisplayName(stage)
-    const failed = isFailed(message)
-
-    return (
-      <div style={{
-        background: failed 
-          ? 'rgba(255, 77, 79, 0.1)'
-          : 'rgba(82, 196, 26, 0.1)',
-        border: failed 
-          ? '1px solid rgba(255, 77, 79, 0.3)'
-          : '1px solid rgba(82, 196, 26, 0.3)',
-        borderRadius: '3px',
-        padding: '3px 6px',
-        textAlign: 'center',
-        width: '100%'
-      }}>
-        <div style={{ 
-          color: failed ? '#ff4d4f' : '#52c41a',
-          fontSize: '11px', 
-          fontWeight: 600, 
-          lineHeight: '12px'
-        }}>
-          {failed ? '✗ 失败' : `${percent}%`}
-        </div>
-        <div style={{ 
-          color: '#999999', 
-          fontSize: '8px', 
-          lineHeight: '9px',
-          minHeight: '9px' // 确保失败状态也有固定高度
-        }}>
-          {failed ? '' : stageDisplayName}
-        </div>
-      </div>
-    )
-  }
-
-  // 已完成状态
-  if (status === 'completed') {
-    return (
-      <div style={{
-        background: 'rgba(82, 196, 26, 0.1)',
-        border: '1px solid rgba(82, 196, 26, 0.3)',
-        borderRadius: '3px',
-        padding: '3px 6px',
-        textAlign: 'center',
-        width: '100%'
-      }}>
-        <div style={{ 
-          color: '#52c41a',
-          fontSize: '11px', 
-          fontWeight: 600, 
-          lineHeight: '12px'
-        }}>
-          ✓
-        </div>
-        <div style={{ 
-          color: '#999999', 
-          fontSize: '8px', 
-          lineHeight: '9px'
-        }}>
-          已完成
-        </div>
-      </div>
-    )
-  }
-
-  // 失败状态
-  if (status === 'failed') {
-    return (
-      <div style={{
-        background: 'rgba(255, 77, 79, 0.1)',
-        border: '1px solid rgba(255, 77, 79, 0.3)',
-        borderRadius: '3px',
-        padding: '3px 6px',
-        textAlign: 'center',
-        width: '100%'
-      }}>
-        <div style={{ 
-          color: '#ff4d4f',
-          fontSize: '11px', 
-          fontWeight: 600, 
-          lineHeight: '12px'
-        }}>
-          ✗ 失败
-        </div>
-        <div style={{ 
-          color: '#999999', 
-          fontSize: '8px', 
-          lineHeight: '9px',
-          minHeight: '9px' // 确保失败状态也有固定高度
-        }}>
-          处理失败
-        </div>
-      </div>
-    )
-  }
-
-  // 等待状态
-  return (
-    <div style={{
-      background: 'rgba(217, 217, 217, 0.1)',
-      border: '1px solid rgba(217, 217, 217, 0.3)',
-      borderRadius: '3px',
-      padding: '3px 6px',
-      textAlign: 'center',
-      width: '100%'
-    }}>
-      <div style={{ 
-        color: '#d9d9d9',
-        fontSize: '11px', 
-        fontWeight: 600, 
-        lineHeight: '12px'
-      }}>
-        ○ 等待中
-      </div>
-      <div style={{ 
-        color: '#999999', 
-        fontSize: '8px', 
-        lineHeight: '9px',
-        minHeight: '9px' // 确保等待状态也有固定高度
-      }}>
-        等待处理
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 9 }}>
+        <span style={{ color: 'var(--ac-sub)', fontSize: 12.5 }}>{label}</span>
+        <span className="ac-mono" style={{ color: 'var(--ac-accent)', fontSize: 12.5 }}>{Math.round(percent)}%</span>
       </div>
     </div>
   )
+  // 终态：小圆点 + 标签
+  const StatusRow = ({ label, dot, color }: { label: string; dot: string; color: string }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 4 + 9 + 12.5 + 2, minHeight: 26 }}>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: dot, flex: '0 0 auto' }} />
+      <span style={{ color, fontSize: 12.5 }}>{label}</span>
+    </div>
+  )
+
+  if (status === 'importing') return <ProgressRow label="导入中" percent={downloadProgress} />
+  if (status === 'downloading') return <ProgressRow label="下载中" percent={currentDownloadProgress} />
+
+  if (status === 'processing') {
+    if (!progress) return <ProgressRow label="初始化中" percent={0} />
+    const { stage, percent, message } = progress
+    if (isFailed(message)) return <StatusRow label="处理失败" dot="var(--ac-error)" color="var(--ac-error)" />
+    return <ProgressRow label={getStageDisplayName(stage)} percent={percent} />
+  }
+
+  if (status === 'completed') return <StatusRow label="已完成" dot="var(--ac-ok)" color="var(--ac-sub)" />
+  if (status === 'failed') return <StatusRow label="处理失败" dot="var(--ac-error)" color="var(--ac-error)" />
+
+  // 等待
+  return <StatusRow label="等待中" dot="var(--ac-muted)" color="var(--ac-muted)" />
 }
 
 // 简化的进度条组件 - 用于详细进度显示

@@ -9,7 +9,7 @@
 }
 
 .collection-card:hover .ant-card-body {
-  background: linear-gradient(135deg, #1f1f1f 0%, #333333 100%);
+  background: linear-gradient(135deg, #1f1f1f 0%, var(--ac-line) 100%);
 }
 
 .video-overlay {

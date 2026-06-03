@@ -1,24 +1,24 @@
 .add-clip-modal .ant-modal-content {
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-  border: 1px solid #404040;
+  background: linear-gradient(135deg, var(--ac-card) 0%, var(--ac-line) 100%);
+  border: 1px solid var(--ac-line);
 }
 
 .add-clip-modal .ant-modal-header {
   background: transparent;
-  border-bottom: 1px solid #404040;
+  border-bottom: 1px solid var(--ac-line);
 }
 
 .add-clip-modal .ant-modal-title {
-  color: #ffffff;
+  color: var(--ac-ink);
   font-weight: 600;
 }
 
 .add-clip-modal .ant-modal-close {
-  color: #ffffff;
+  color: var(--ac-ink);
 }
 
 .add-clip-modal .ant-modal-close:hover {
-  color: #1890ff;
+  color: var(--ac-accent);
 }
 
 .add-clip-modal-content {
@@ -42,9 +42,9 @@
   flex: 1;
   overflow-y: auto;
   max-height: 400px;
-  border: 1px solid #404040;
+  border: 1px solid var(--ac-line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--ac-line);
 }
 
 .clip-list-item {
@@ -61,7 +61,7 @@
 
 .clip-list-item.selected {
   background: rgba(24, 144, 255, 0.2) !important;
-  border-left: 3px solid #1890ff;
+  border-left: 3px solid var(--ac-accent);
 }
 
 .clip-item-content {
@@ -81,7 +81,7 @@
 }
 
 .clip-title {
-  color: #ffffff;
+  color: var(--ac-ink);
   font-weight: 500;
   font-size: 14px;
   margin-bottom: 6px;
@@ -112,7 +112,7 @@
 }
 
 .clips-list-container::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--ac-line);
   border-radius: 3px;
 }
 
@@ -127,14 +127,14 @@
 
 /* 搜索框样式 */
 .add-clip-modal .ant-input-affix-wrapper {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid #404040;
-  color: #ffffff;
+  background: var(--ac-line);
+  border: 1px solid var(--ac-line);
+  color: var(--ac-ink);
 }
 
 .add-clip-modal .ant-input {
   background: transparent;
-  color: #ffffff;
+  color: var(--ac-ink);
 }
 
 .add-clip-modal .ant-input::placeholder {
@@ -147,22 +147,22 @@
 
 /* 复选框样式 */
 .add-clip-modal .ant-checkbox-wrapper {
-  color: #ffffff;
+  color: var(--ac-ink);
 }
 
 .add-clip-modal .ant-checkbox-inner {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: #404040;
+  background-color: var(--ac-line);
+  border-color: var(--ac-line);
 }
 
 .add-clip-modal .ant-checkbox-checked .ant-checkbox-inner {
-  background-color: #1890ff;
-  border-color: #1890ff;
+  background-color: var(--ac-accent);
+  border-color: var(--ac-accent);
 }
 
 /* 按钮样式 */
 .add-clip-modal .ant-btn-link {
-  color: #1890ff;
+  color: var(--ac-accent);
 }
 
 .add-clip-modal .ant-btn-link:hover {

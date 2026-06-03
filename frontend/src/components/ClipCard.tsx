@@ -118,15 +118,6 @@ const ClipCard: React.FC<ClipCardProps> = ({
     return `${start.substring(0, 8)} - ${end.substring(0, 8)}`
   }
 
-  const getScoreColor = (score: number) => {
-    // 根据分数区间设置不同的颜色
-    if (score >= 0.9) return '#52c41a' // 绿色 - 优秀
-    if (score >= 0.8) return '#1890ff' // 蓝色 - 良好
-    if (score >= 0.7) return '#faad14' // 橙色 - 一般
-    if (score >= 0.6) return '#ff7a45' // 红橙色 - 较差
-    return '#ff4d4f' // 红色 - 差
-  }
-
 
   // 获取要显示的简介内容
   const getDisplayContent = () => {
@@ -169,8 +160,8 @@ const ClipCard: React.FC<ClipCardProps> = ({
           style={{ 
             height: '380px',
             borderRadius: '16px',
-            border: '1px solid #303030',
-            background: 'linear-gradient(135deg, #1f1f1f 0%, #2a2a2a 100%)',
+            border: '1px solid var(--ac-line)',
+            background: 'var(--ac-card)',
             overflow: 'hidden',
             cursor: 'pointer'
           }}
@@ -185,7 +176,7 @@ const ClipCard: React.FC<ClipCardProps> = ({
                 height: '200px', 
                 background: videoThumbnail 
                   ? `url(${videoThumbnail}) center/cover` 
-                  : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  : 'var(--ac-thumb)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -211,69 +202,69 @@ const ClipCard: React.FC<ClipCardProps> = ({
                 }}
                 className="video-overlay"
               >
-                <PlayCircleOutlined style={{ fontSize: '40px', color: 'white' }} />
+                <PlayCircleOutlined style={{ fontSize: '40px', color: 'rgba(255,255,255,0.95)' }} />
               </div>
               
-              {/* 右上角推荐分数 */}
-              <div 
+              {/* 右上角推荐分数 — 克制玻璃胶囊 + mono 数字 */}
+              <div
                 style={{
                   position: 'absolute',
                   top: '12px',
                   right: '12px',
-                  background: getScoreColor(clip.final_score),
-                  color: 'white',
-                  padding: '4px 8px',
-                  borderRadius: '8px',
+                  background: 'rgba(0,0,0,0.55)',
+                  backdropFilter: 'blur(6px)',
+                  color: 'rgba(255,255,255,0.95)',
+                  padding: '4px 9px',
+                  borderRadius: '999px',
                   fontSize: '12px',
-                  fontWeight: 500,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '5px'
                 }}
               >
-                <StarFilled style={{ fontSize: '12px' }} />
-                {(clip.final_score * 100).toFixed(0)}分
+                <StarFilled style={{ fontSize: '10px', opacity: 0.85 }} />
+                <span className="ac-mono">{(clip.final_score * 100).toFixed(0)}</span>
               </div>
               
-              {/* 左下角时间区间 */}
-              <div 
+              {/* 左下角时间区间 — 玻璃胶囊 + mono */}
+              <div
                 style={{
                   position: 'absolute',
                   bottom: '12px',
                   left: '12px',
-                  background: 'rgba(0,0,0,0.7)',
-                  color: 'white',
-                  padding: '4px 8px',
-                  borderRadius: '8px',
+                  background: 'rgba(0,0,0,0.55)',
+                  backdropFilter: 'blur(6px)',
+                  color: 'rgba(255,255,255,0.95)',
+                  padding: '4px 9px',
+                  borderRadius: '999px',
                   fontSize: '12px',
-                  fontWeight: 500,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '5px'
                 }}
               >
-                <ClockCircleOutlined style={{ fontSize: '12px' }} />
-                {getDuration()}
+                <ClockCircleOutlined style={{ fontSize: '11px', opacity: 0.85 }} />
+                <span className="ac-mono">{getDuration()}</span>
               </div>
-              
-              {/* 右下角视频时长 */}
-              <div 
+
+              {/* 右下角视频时长 — 玻璃胶囊 + mono */}
+              <div
                 style={{
                   position: 'absolute',
                   bottom: '12px',
                   right: '12px',
-                  background: 'rgba(0,0,0,0.7)',
-                  color: 'white',
-                  padding: '4px 8px',
-                  borderRadius: '8px',
+                  background: 'rgba(0,0,0,0.55)',
+                  backdropFilter: 'blur(6px)',
+                  color: 'rgba(255,255,255,0.95)',
+                  padding: '4px 9px',
+                  borderRadius: '999px',
                   fontSize: '12px',
-                  fontWeight: 500,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px'
                 }}
               >
-                {formatDuration(calculateDuration(clip.start_time, clip.end_time))}
+                <span className="ac-mono">{formatDuration(calculateDuration(clip.start_time, clip.end_time))}</span>
               </div>
             </div>
           }
@@ -307,7 +298,7 @@ const ClipCard: React.FC<ClipCardProps> = ({
                     fontSize: '16px',
                     fontWeight: 600,
                     lineHeight: '1.4',
-                    color: '#ffffff',
+                    color: 'var(--ac-ink)',
                     width: '100%'
                   }}
                 />
@@ -335,7 +326,7 @@ const ClipCard: React.FC<ClipCardProps> = ({
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
                       lineHeight: '1.5',
-                      color: '#b0b0b0',
+                      color: 'var(--ac-sub)',
                       cursor: 'pointer',
                       wordBreak: 'break-word',
                       textOverflow: 'ellipsis',
@@ -356,53 +347,53 @@ const ClipCard: React.FC<ClipCardProps> = ({
               alignItems: 'center',
               marginTop: 'auto'
             }}>
-              <Button 
-                type="text" 
+              <Button
+                type="text"
                 size="small"
                 icon={<PlayCircleOutlined />}
                 onClick={() => setShowPlayer(true)}
                 style={{
-                  color: '#4facfe',
-                  border: '1px solid rgba(79, 172, 254, 0.3)',
-                  borderRadius: '6px',
+                  color: 'var(--ac-ink)',
+                  border: '1px solid var(--ac-line)',
+                  borderRadius: '999px',
                   fontSize: '12px',
                   height: '28px',
-                  padding: '0 12px',
-                  background: 'rgba(79, 172, 254, 0.1)'
+                  padding: '0 14px',
+                  background: 'transparent'
                 }}
               >
                 播放
               </Button>
-              <Button 
-                type="text" 
+              <Button
+                type="text"
                 size="small"
                 icon={<DownloadOutlined />}
                 onClick={handleDownloadWithTitle}
                 style={{
-                  color: '#52c41a',
-                  border: '1px solid rgba(82, 196, 26, 0.3)',
-                  borderRadius: '6px',
+                  color: 'var(--ac-sub)',
+                  border: '1px solid var(--ac-line)',
+                  borderRadius: '999px',
                   fontSize: '12px',
                   height: '28px',
-                  padding: '0 12px',
-                  background: 'rgba(82, 196, 26, 0.1)'
+                  padding: '0 14px',
+                  background: 'transparent'
                 }}
               >
                 下载
               </Button>
-              <Button 
-                type="text" 
+              <Button
+                type="text"
                 size="small"
                 icon={<UploadOutlined />}
                 onClick={() => message.info('开发中，敬请期待', 3)}
                 style={{
-                  color: '#ff7875',
-                  border: '1px solid rgba(255, 120, 117, 0.3)',
-                  borderRadius: '6px',
+                  color: 'var(--ac-sub)',
+                  border: '1px solid var(--ac-line)',
+                  borderRadius: '999px',
                   fontSize: '12px',
                   height: '28px',
-                  padding: '0 12px',
-                  background: 'rgba(255, 120, 117, 0.1)'
+                  padding: '0 14px',
+                  background: 'transparent'
                 }}
               >
                 投稿
@@ -434,11 +425,11 @@ const ClipCard: React.FC<ClipCardProps> = ({
         styles={{
           header: {
             borderBottom: '1px solid #303030',
-            background: '#1f1f1f'
+            background: 'var(--ac-card)'
           }
         }}
         closeIcon={
-          <span style={{ color: '#ffffff', fontSize: '16px' }}>×</span>
+          <span style={{ color: 'var(--ac-ink)', fontSize: '16px' }}>×</span>
         }
         title={
           <div style={{ 
@@ -459,7 +450,7 @@ const ClipCard: React.FC<ClipCardProps> = ({
                 }
               }}
               style={{ 
-                color: '#ffffff', 
+                color: 'var(--ac-ink)',
                 fontSize: '16px', 
                 fontWeight: '500',
                 flex: 1,

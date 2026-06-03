@@ -308,41 +308,39 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete, onRetry, o
     <Card
       hoverable
       className="project-card"
-      style={{ 
-        width: 200, 
-        height: 240,
-        borderRadius: '4px',
+      style={{
+        width: '100%',
+        borderRadius: '16px',
         overflow: 'hidden',
-        background: 'linear-gradient(145deg, #1e1e1e 0%, #2a2a2a 100%)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        background: 'var(--ac-card)',
+        border: '1px solid var(--ac-line)',
+        boxShadow: 'none',
+        transition: 'all 0.2s ease',
         cursor: 'pointer',
         marginBottom: '0px'
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-4px)'
-        e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.4)'
+        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.boxShadow = 'var(--ac-shadow)'
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)'
-        e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)'
+        e.currentTarget.style.boxShadow = 'none'
       }}
       bodyStyle={{
-        padding: '12px',
+        padding: '18px 20px 20px',
         background: 'transparent',
-        height: 'calc(100% - 120px)',
         display: 'flex',
         flexDirection: 'column'
       }}
       cover={
-        <div 
-          style={{ 
-            height: 120, 
+        <div
+          style={{
+            height: 160,
             position: 'relative',
-            background: videoThumbnail 
-              ? `url(${videoThumbnail}) center/cover` 
-              : 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+            background: videoThumbnail
+              ? `url(${videoThumbnail}) center/cover`
+              : 'var(--ac-thumb)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -370,44 +368,15 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete, onRetry, o
         >
           {/* 缩略图加载状态 */}
           {thumbnailLoading && (
-            <div style={{ 
-              textAlign: 'center',
-              color: 'rgba(255, 255, 255, 0.8)'
-            }}>
-              <LoadingOutlined 
-                style={{ 
-                  fontSize: '24px', 
-                  marginBottom: '4px'
-                }} 
-              />
-              <div style={{ 
-                fontSize: '12px',
-                fontWeight: 500
-              }}>
-                生成封面中...
-              </div>
+            <div style={{ textAlign: 'center', color: 'var(--ac-muted)' }}>
+              <LoadingOutlined style={{ fontSize: '22px', marginBottom: '4px' }} />
+              <div style={{ fontSize: '12px' }}>生成封面中…</div>
             </div>
           )}
-          
+
           {/* 无缩略图时的默认显示 */}
           {!videoThumbnail && !thumbnailLoading && (
-            <div style={{ textAlign: 'center' }}>
-              <PlayCircleOutlined 
-                style={{ 
-                  fontSize: '40px', 
-                  color: 'rgba(255, 255, 255, 0.9)',
-                  marginBottom: '4px',
-                  filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))'
-                }} 
-              />
-              <div style={{ 
-                color: 'rgba(255, 255, 255, 0.8)', 
-                fontSize: '12px',
-                fontWeight: 500
-              }}>
-                点击预览
-              </div>
-            </div>
+            <PlayCircleOutlined style={{ fontSize: '32px', color: 'var(--ac-muted)' }} />
           )}
           
           {/* 分类标签 - 左上角 */}
@@ -447,14 +416,13 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete, onRetry, o
             right: '0',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(10px)',
+            alignItems: 'flex-end',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.42), rgba(0,0,0,0))',
             borderRadius: '0',
-            padding: '6px 8px',
-            height: '28px'
+            padding: '10px 12px',
+            height: '52px'
           }}>
-            <Text style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.8)' }}>
+            <Text style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.92)' }}>
               {dayjs(project.created_at).tz('Asia/Shanghai').fromNow()}
             </Text>
             
@@ -646,84 +614,35 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete, onRetry, o
             </Tooltip>
           </div>
           
-          {/* 状态和统计信息 */}
+          {/* 状态和统计信息 — Calm Premium，见 DESIGN.md */}
           {(normalizedStatus === 'importing' || normalizedStatus === 'downloading' || normalizedStatus === 'processing' || normalizedStatus === 'failed') ? (
-            // 导入中、处理中、失败：只显示状态块，居中展示
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'center',
-              marginBottom: '12px'
-            }}>
-              <div style={{ width: '100%', maxWidth: '200px' }}>
-                <UnifiedStatusBar
-                  projectId={project.id}
-                  status={normalizedStatus}
-                  downloadProgress={progressPercent}
-                  onStatusChange={(newStatus) => {
-                    console.log(`项目 ${project.id} 状态变化: ${normalizedStatus} -> ${newStatus}`)
-                  }}
-                  onDownloadProgressUpdate={(progress) => {
-                    console.log(`项目 ${project.id} 下载进度更新: ${progress}%`)
-                  }}
-                />
-              </div>
+            // 进行中 / 失败：细进度线或终态点，占满宽度
+            <div style={{ marginBottom: '2px' }}>
+              <UnifiedStatusBar
+                projectId={project.id}
+                status={normalizedStatus}
+                downloadProgress={progressPercent}
+                onStatusChange={(newStatus) => {
+                  console.log(`项目 ${project.id} 状态变化: ${normalizedStatus} -> ${newStatus}`)
+                }}
+                onDownloadProgressUpdate={(progress) => {
+                  console.log(`项目 ${project.id} 下载进度更新: ${progress}%`)
+                }}
+              />
             </div>
           ) : (
-            // 其他状态：显示状态块 + 切片数 + 合集数
-            <div style={{ 
-              display: 'flex', 
-              gap: '6px',
-              marginBottom: '12px'
-            }}>
-              {/* 状态显示 - 占据更多空间 */}
-              <div style={{ flex: 2 }}>
-                <UnifiedStatusBar
-                  projectId={project.id}
-                  status={normalizedStatus}
-                  downloadProgress={progressPercent}
-                  onStatusChange={(newStatus) => {
-                    console.log(`项目 ${project.id} 状态变化: ${normalizedStatus} -> ${newStatus}`)
-                  }}
-                  onDownloadProgressUpdate={(progress) => {
-                    console.log(`项目 ${project.id} 下载进度更新: ${progress}%`)
-                  }}
-                />
-              </div>
-              
-              {/* 切片数量 - 减小宽度 */}
-              <div style={{
-                background: 'rgba(102, 126, 234, 0.15)',
-                border: '1px solid rgba(102, 126, 234, 0.3)',
-                borderRadius: '3px',
-                padding: '3px 4px',
-                textAlign: 'center',
-                minWidth: '50px',
-                flex: 0.8
-              }}>
-                <div style={{ color: '#667eea', fontSize: '11px', fontWeight: 600, lineHeight: '12px' }}>
-                  {project.total_clips || 0}
-                </div>
-                <div style={{ color: '#999999', fontSize: '8px', lineHeight: '9px' }}>
-                  切片
-                </div>
-              </div>
-              
-              {/* 合集数量 - 减小宽度 */}
-              <div style={{
-                background: 'rgba(118, 75, 162, 0.15)',
-                border: '1px solid rgba(118, 75, 162, 0.3)',
-                borderRadius: '3px',
-                padding: '3px 4px',
-                textAlign: 'center',
-                minWidth: '50px',
-                flex: 0.8
-              }}>
-                <div style={{ color: '#764ba2', fontSize: '11px', fontWeight: 600, lineHeight: '12px' }}>
-                  {project.total_collections || 0}
-                </div>
-                <div style={{ color: '#999999', fontSize: '8px', lineHeight: '9px' }}>
-                  合集
-                </div>
+            // 已完成：● 已完成  +  灰色 mono 元信息（N 切片 · M 合集）
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+              <UnifiedStatusBar
+                projectId={project.id}
+                status={normalizedStatus}
+                downloadProgress={progressPercent}
+                onStatusChange={() => {}}
+              />
+              <div style={{ color: 'var(--ac-muted)', fontSize: '12.5px', whiteSpace: 'nowrap' }}>
+                <span className="ac-mono">{project.total_clips || 0}</span> 切片
+                <span style={{ margin: '0 6px' }}>·</span>
+                <span className="ac-mono">{project.total_collections || 0}</span> 合集
               </div>
             </div>
           )}
