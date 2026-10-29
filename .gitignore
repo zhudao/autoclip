@@ -33,6 +33,15 @@ venv_*/
 *.webm
 *.m4v
 *.3gp
+# 随包提供的示例项目原片（17 MB，backend/services/example_project.py）
+!backend/assets/example/source.mp4
+# 随包提供的片尾动画（backend/services/output_branding.py，源文件见 design/outro-v5）
+!backend/assets/outro/*.mp4
+# 剪辑风格卡片的静音预览（2.5 秒，无音轨）
+!frontend/src/assets/editing-style/*.mp4
+!frontend/src/assets/editing-style/*.webm
+# 导入页剪辑风格选择器的验收截图和交互录屏
+!docs/images/editing-style-picker/*.mp4
 *.mp3
 *.wav
 *.flac
@@ -82,10 +91,13 @@ frontend/.vite/
 target/
 src-tauri/target/
 src-tauri/gen/
+src-tauri/.updater-private-key
+src-tauri/.updater-public-key
 
 # Python / 打包产物
 build/
 dist/
+*.mcpb
 releases/
 *.toc
 *.pkg
@@ -122,6 +134,7 @@ Thumbs.db
 .env.production.local
 .env.backup
 .env.*.backup
+.env.sentry-build-plugin
 
 # 本地归档与备份（仅本地保留，不入仓）
 cleanup_backup/
@@ -130,6 +143,8 @@ local_backups/
 
 # 进程ID文件
 *.pid
+*.pid.json
+*.pid.tmp
 
 # Redis数据文件
 dump.rdb
@@ -140,3 +155,6 @@ control/
 *.temp
 *.bak
 .gstack/
+
+# Python 打包产物
+*.egg-info/

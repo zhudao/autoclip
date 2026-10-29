@@ -1,3 +1,5 @@
+import { t } from '../i18n'
+import { useTranslation } from 'react-i18next'
 /**
  * 统一状态栏组件 - 替换旧的复杂进度系统
  * 支持下载中、处理中、完成等状态的统一显示
@@ -6,6 +8,8 @@
 import React, { useEffect, useState } from 'react'
 import { Progress, Typography } from 'antd'
 import { useSimpleProgressStore, getStageDisplayName, getStageColor, isCompleted, isFailed } from '../stores/useSimpleProgressStore'
+import { apiConfigManager } from '../utils/apiConfig'
+import { displayedDownloadPercent, readDownloadProgress } from '../utils/downloadProgress'
 
 const { Text } = Typography
 
@@ -24,9 +28,17 @@ export const UnifiedStatusBar: React.FC<UnifiedStatusBarProps> = ({
   onStatusChange,
   onDownloadProgressUpdate
 }) => {
+  useTranslation()
   const { getProgress, startPolling, stopPolling } = useSimpleProgressStore()
   const [isPolling, setIsPolling] = useState(false)
-  const [currentDownloadProgress, setCurrentDownloadProgress] = useState(downloadProgress)
+  // null：这次还没从接口读到进度。不能用 useState(downloadProgress)，
+  // 否则卡片第一次挂上时的 5% 占位会一直留在这里。
+  const [polledProgress, setPolledProgress] = useState<number | null>(null)
+  const shownDownloadProgress = displayedDownloadPercent(downloadProgress, polledProgress)
+
+  useEffect(() => {
+    setPolledProgress(null)
+  }, [projectId])
   
   const progress = getProgress(projectId)
 
@@ -64,30 +76,33 @@ export const UnifiedStatusBar: React.FC<UnifiedStatusBarProps> = ({
   // 下载进度轮询
   useEffect(() => {
     if (status === 'downloading') {
+      let cancelled = false
       const pollDownloadProgress = async () => {
         try {
           console.log(`轮询下载进度: ${projectId}`)
-          const response = await fetch(`/api/v1/projects/${projectId}`)
-          if (response.ok) {
-            const projectData = await response.json()
-            console.log('项目数据:', projectData)
-            const newProgress = projectData.processing_config?.download_progress || 0
-            console.log(`下载进度更新: ${newProgress}%`)
-            setCurrentDownloadProgress(newProgress)
-            onDownloadProgressUpdate?.(newProgress)
-            
-            // 如果下载完成，检查是否需要切换到处理状态
-            if (newProgress >= 100) {
-              console.log('下载完成，切换到处理状态')
-              setTimeout(() => {
-                onStatusChange?.('processing')
-              }, 1000)
+          const response = await fetch(apiConfigManager.buildUrl(`/projects/${projectId}`))
+          if (cancelled || !response.ok) {
+            if (!cancelled && !response.ok) {
+              console.error('获取项目数据失败:', response.status, response.statusText)
             }
-          } else {
-            console.error('获取项目数据失败:', response.status, response.statusText)
+            return
+          }
+          const projectData = await response.json()
+          if (cancelled) return
+          console.log('项目数据:', projectData)
+          const newProgress = readDownloadProgress(projectData)
+          console.log(`下载进度更新: ${newProgress}%`)
+          setPolledProgress(newProgress)
+          onDownloadProgressUpdate?.(newProgress)
+
+          if (newProgress >= 100) {
+            console.log('下载完成，切换到处理状态')
+            setTimeout(() => {
+              onStatusChange?.('processing')
+            }, 1000)
           }
         } catch (error) {
-          console.error('获取下载进度失败:', error)
+          if (!cancelled) console.error('获取下载进度失败:', error)
         }
       }
 
@@ -97,7 +112,10 @@ export const UnifiedStatusBar: React.FC<UnifiedStatusBarProps> = ({
       // 每5秒轮询一次，减少频繁请求
       const interval = setInterval(pollDownloadProgress, 5000)
       
-      return () => clearInterval(interval)
+      return () => {
+        cancelled = true
+        clearInterval(interval)
+      }
     }
   }, [status, projectId, onDownloadProgressUpdate, onStatusChange])
 
@@ -139,21 +157,21 @@ export const UnifiedStatusBar: React.FC<UnifiedStatusBarProps> = ({
     </div>
   )
 
-  if (status === 'importing') return <ProgressRow label="导入中" percent={downloadProgress} />
-  if (status === 'downloading') return <ProgressRow label="下载中" percent={currentDownloadProgress} />
+  if (status === 'importing') return <ProgressRow label={t("导入中")} percent={downloadProgress} />
+  if (status === 'downloading') return <ProgressRow label={t("下载中")} percent={shownDownloadProgress} />
 
   if (status === 'processing') {
-    if (!progress) return <ProgressRow label="初始化中" percent={0} />
+    if (!progress) return <ProgressRow label={t("初始化中")} percent={0} />
     const { stage, percent, message } = progress
-    if (isFailed(message)) return <StatusRow label="处理失败" dot="var(--ac-error)" color="var(--ac-error)" />
+    if (isFailed(message)) return <StatusRow label={t("处理失败")} dot="var(--ac-error)" color="var(--ac-error)" />
     return <ProgressRow label={getStageDisplayName(stage)} percent={percent} />
   }
 
-  if (status === 'completed') return <StatusRow label="已完成" dot="var(--ac-ok)" color="var(--ac-sub)" />
-  if (status === 'failed') return <StatusRow label="处理失败" dot="var(--ac-error)" color="var(--ac-error)" />
+  if (status === 'completed') return <StatusRow label={t("已完成")} dot="var(--ac-ok)" color="var(--ac-sub)" />
+  if (status === 'failed') return <StatusRow label={t("处理失败")} dot="var(--ac-error)" color="var(--ac-error)" />
 
   // 等待
-  return <StatusRow label="等待中" dot="var(--ac-muted)" color="var(--ac-muted)" />
+  return <StatusRow label={t("等待中")} dot="var(--ac-muted)" color="var(--ac-muted)" />
 }
 
 // 简化的进度条组件 - 用于详细进度显示
@@ -168,6 +186,7 @@ export const SimpleProgressDisplay: React.FC<SimpleProgressDisplayProps> = ({
   status,
   showDetails = false
 }) => {
+  useTranslation()
   const { getProgress } = useSimpleProgressStore()
   const progress = getProgress(projectId)
 

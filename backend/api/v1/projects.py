@@ -123,7 +123,9 @@ async def upload_files(
             
             # 检查是否已有相同项目正在处理中
             from ...models.task import Task, TaskStatus
-            existing_task = db.query(Task).filter(
+            # 这里以前写的是裸 `db`（未定义），NameError 被下面的 except 吞掉，
+            # 结果本地上传的项目从来不会自动开始处理，一直停在 pending 等用户手点
+            existing_task = project_service.db.query(Task).filter(
                 Task.project_id == project_id,
                 Task.status == TaskStatus.RUNNING,
                 Task.name.like('%导入%')
@@ -273,11 +275,10 @@ async def get_project(
         if include_clips or include_collections:
             from ...services.clip_service import ClipService
             from ...services.collection_service import CollectionService
-            from ...core.database import get_db
-            
-            # 获取数据库会话
-            db = next(get_db())
-            
+
+            # 复用本次请求的会话。单独取生成器会丢掉 finally，连接不归还（#175）。
+            db = project_service.db
+
             if include_clips:
                 clip_service = ClipService(db)
                 clips = clip_service.get_multi(filters={"project_id": project_id})
@@ -762,7 +763,11 @@ async def get_processing_status(
         status = processing_service.get_processing_status(project_id, str(latest_task.id))
         
         return status
-    except Exception as e:
+    except HTTPException:
+        # 404 等预期响应原样返回。记成 exception 会被 Sentry 当成故障，
+        # 外层再包一层 500 会让处理页把「项目不存在」当成服务器错误一直重试。
+        raise
+    except Exception:
         logger.exception("获取处理状态失败: %s", project_id)
         raise HTTPException(status_code=500, detail="获取处理状态失败，请稍后重试")
 
@@ -984,12 +989,21 @@ async def get_project_clip(
         if not video_file.exists():
             raise HTTPException(status_code=404, detail="Clip video file not found")
         
-        # 返回文件流
+        # 内联播放。默认 attachment 时，macOS WKWebView 的 <video> 不会播放。
+        # 不把磁盘上的原始文件名交给 FileResponse：响应头按 latin-1 编码，
+        # 中文等非 ASCII 文件名会 UnicodeEncodeError，预览直接 500。
+        # 与下载接口一致，只用 RFC 5987 filename*。
         from fastapi.responses import FileResponse
+        from ...utils.content_disposition import content_disposition_header
         return FileResponse(
             path=str(video_file),
             media_type="video/mp4",
-            filename=video_file.name
+            content_disposition_type="inline",
+            headers={
+                "Accept-Ranges": "bytes",
+                "Cache-Control": "no-cache",
+                "Content-Disposition": content_disposition_header(video_file.name, "inline"),
+            },
         )
     except HTTPException:
         raise
@@ -1288,19 +1302,15 @@ async def download_project_file(
             # 生成下载文件名
             collection_name = collection.name or f"collection_{collection_id}"
             from ...utils.video_processor import VideoProcessor
+            from ...utils.content_disposition import content_disposition_header
             safe_name = VideoProcessor.sanitize_filename(collection_name)
             filename = f"{safe_name}.mp4"
-            
-            # 对文件名进行URL编码
-            import urllib.parse
-            encoded_filename = urllib.parse.quote(filename.encode('utf-8'))
-            
+
             return FileResponse(
                 path=str(file_path),
-                filename=filename,
                 media_type="video/mp4",
                 headers={
-                    "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+                    "Content-Disposition": content_disposition_header(filename, "attachment")
                 }
             )
         
@@ -1321,19 +1331,15 @@ async def download_project_file(
             # 生成下载文件名
             clip_title = clip.title or f"clip_{clip_id}"
             from ...utils.video_processor import VideoProcessor
+            from ...utils.content_disposition import content_disposition_header
             safe_name = VideoProcessor.sanitize_filename(clip_title)
             filename = f"{safe_name}.mp4"
-            
-            # 对文件名进行URL编码
-            import urllib.parse
-            encoded_filename = urllib.parse.quote(filename.encode('utf-8'))
-            
+
             return FileResponse(
                 path=str(file_path),
-                filename=filename,
                 media_type="video/mp4",
                 headers={
-                    "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+                    "Content-Disposition": content_disposition_header(filename, "attachment")
                 }
             )
         
@@ -1395,3 +1401,57 @@ async def get_collection_thumbnail(
     except Exception as e:
         logger.error(f"获取合集封面失败: {e}")
         raise HTTPException(status_code=500, detail=f"获取合集封面失败: {str(e)}")
+
+
+# ---------------------------------------------------------------- 发布导出 ---
+from pydantic import BaseModel, Field
+
+
+class ClipExportRequest(BaseModel):
+    preset: str = Field("douyin", description="douyin / xiaohongshu / shorts / bilibili / original / 1080p60")
+    subtitles: bool = True
+    title_card: bool = True
+    layout: Optional[str] = Field(None, description="覆盖预设画幅：blur / crop / fit / none")
+
+
+@router.get("/{project_id}/export-presets")
+async def list_export_presets(project_id: str):
+    from backend.services.publish_export import list_presets
+    return {"presets": list_presets()}
+
+
+@router.post("/{project_id}/clips/{clip_id}/export")
+async def start_clip_export(project_id: str, clip_id: str, body: ClipExportRequest = ClipExportRequest()):
+    from backend.services.publish_export import ExportRequest, start_export, load_clip_meta
+    try:
+        load_clip_meta(project_id, clip_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return start_export(ExportRequest(
+        project_id=project_id, clip_id=clip_id, preset=body.preset,
+        subtitles=body.subtitles, title_card=body.title_card, layout=body.layout,
+    ))
+
+
+@router.get("/{project_id}/exports/{job_id}")
+async def get_clip_export_job(project_id: str, job_id: str):
+    from backend.services.publish_export import get_export_job
+    job = get_export_job(job_id)
+    if not job or job.get("project_id") != project_id:
+        raise HTTPException(status_code=404, detail="没有这个导出任务")
+    return job
+
+
+@router.get("/{project_id}/exports/{job_id}/download")
+async def download_clip_export(project_id: str, job_id: str):
+    from fastapi.responses import FileResponse
+    from backend.services.publish_export import get_export_job
+    job = get_export_job(job_id)
+    if not job or job.get("project_id") != project_id:
+        raise HTTPException(status_code=404, detail="没有这个导出任务")
+    if job.get("status") != "completed" or not (job.get("result") or {}).get("path"):
+        raise HTTPException(status_code=409, detail="导出尚未完成")
+    path = Path(job["result"]["path"])
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="导出文件不存在")
+    return FileResponse(path=str(path), media_type="video/mp4", filename=path.name)

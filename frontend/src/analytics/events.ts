@@ -4,17 +4,22 @@
  * 统一在这里定义事件名与载荷类型，避免裸字符串散落各处。
  * 所有 capture 都通过 trackEvent，未初始化 / 已关闭时自动 no-op。
  */
-import { posthog } from './posthog'
+import { captureBusinessEvent } from './posthog'
+import type { SponsorId } from '../features/settings/providers'
 
 export const AnalyticsEvent = {
   /** 导入素材（上传/选择视频开始一个项目） */
   VideoImported: 'video_imported',
-  /** 出片：成功生成切片 */
+  /** Legacy: one downloadVideo call received a file and triggered browser download. */
   ClipsExported: 'clips_exported',
   /** 关键流程失败（导入/转写/切片/导出任一环节） */
   ProcessingFailed: 'processing_failed',
   /** 设置/更新 LLM API key */
   ApiKeyConfigured: 'api_key_configured',
+  /** 打开赞助商的注册 / 接入说明链接（只记录是哪家、哪个入口） */
+  SponsorLinkOpened: 'sponsor_link_opened',
+  /** 历史兼容事件；当前有真实素材的示例改用 example_project_open_* 与 example_project_viewed */
+  ExampleProjectOpened: 'example_project_opened',
 } as const
 
 export type AnalyticsEventName =
@@ -23,11 +28,9 @@ export type AnalyticsEventName =
 /** 通用埋点入口。posthog 未初始化或已 opt-out 时为 no-op（内部已处理）。 */
 function trackEvent(
   name: AnalyticsEventName,
-  properties?: Record<string, unknown>,
+  properties?: Record<string, string | number | boolean | undefined>,
 ): void {
-  // posthog.capture 在未 init 时不会抛错；保险起见仍做判断
-  if (typeof posthog?.capture !== 'function') return
-  posthog.capture(name, properties)
+  captureBusinessEvent(name, properties)
 }
 
 export function trackVideoImported(props?: {
@@ -53,7 +56,16 @@ export function trackProcessingFailed(props: {
   message?: string
   code?: string | number
 }): void {
-  trackEvent(AnalyticsEvent.ProcessingFailed, props)
+  // Never send arbitrary exception text (may contain tokens, URLs or local paths).
+  trackEvent(AnalyticsEvent.ProcessingFailed, { stage: props.stage, code: props.code })
+}
+
+export function trackSponsorLinkOpened(props: {
+  sponsor: SponsorId
+  target: 'register' | 'guide'
+  placement: 'settings_model' | 'home_setup'
+}): void {
+  trackEvent(AnalyticsEvent.SponsorLinkOpened, props)
 }
 
 export function trackApiKeyConfigured(props: {
@@ -62,4 +74,8 @@ export function trackApiKeyConfigured(props: {
   hasKey: boolean
 }): void {
   trackEvent(AnalyticsEvent.ApiKeyConfigured, props)
+}
+
+export function trackExampleProjectOpened(): void {
+  trackEvent(AnalyticsEvent.ExampleProjectOpened)
 }

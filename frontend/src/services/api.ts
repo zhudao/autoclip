@@ -1,7 +1,12 @@
+import { projectProperties } from '../analytics/workflow'
+import { t } from '../i18n'
 import axios from 'axios'
 import { Project, Clip, Collection } from '../store/useProjectStore'
 import { errorHandler } from '../utils/errorHandler'
 import { apiConfigManager } from '../utils/apiConfig'
+import { observeOperation, observeDownload, observeMediaResponse } from '../analytics/operations'
+import { workflow } from '../analytics/observer'
+import { captureBusinessEvent } from '../analytics/posthog'
 import {
   trackVideoImported,
   trackClipsExported,
@@ -54,6 +59,58 @@ const isTauriRuntime = () => (
   ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__)
 )
 
+// 打包后的桌面页在 tauri://localhost（macOS）或 http://tauri.localhost。
+// 根路径 /api/v1 会打到壳页面，打不到本机后端。开发时 base 仍是 /api/v1，走 Vite 代理。
+const mediaUrl = (path: string): string => {
+  const base = apiConfigManager.getBaseUrl().replace(/\/$/, '')
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`
+}
+
+const resolveMediaUrl = async (path: string): Promise<string> => {
+  if (isTauriRuntime() && !apiConfigManager.isReady()) {
+    await apiConfigManager.waitForReady()
+  }
+  return mediaUrl(path)
+}
+
+const saveWithSystemDownload = async (
+  url: string,
+  properties: { project_id: string; artifact_type: string; export_id?: string },
+) => {
+  const saved = await observeOperation('media_download', properties, async () => {
+    const { invoke } = await import('@tauri-apps/api/core')
+    const result = await invoke<{ path: string; sizeBytes?: number; size_bytes?: number }>('save_local_download', { url })
+    const size = result?.sizeBytes ?? result?.size_bytes ?? 0
+    if (!size) throw new Error('Empty media response')
+    return { ...result, size }
+  }, (result, _startedAt, props) => {
+    captureBusinessEvent('media_download_received', { ...props, size_bytes: result.size })
+    captureBusinessEvent('media_download_saved', { ...props, download_mode: 'native', size_bytes: result.size })
+  })
+  const { message } = await import('antd')
+  message.success(t('已保存到下载文件夹'))
+  return saved
+}
+
+const saveBlobDownload = (data: Blob, filename: string) => {
+  const downloadUrl = window.URL.createObjectURL(new Blob([data], { type: 'video/mp4' }))
+  const link = document.createElement('a')
+  link.href = downloadUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(downloadUrl)
+}
+
+const filenameFromDisposition = (contentDisposition: string | undefined, fallback: string): string => {
+  if (!contentDisposition) return fallback
+  const filenameStarMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/)
+  if (filenameStarMatch) return decodeURIComponent(filenameStarMatch[1])
+  const filenameMatch = contentDisposition.match(/filename="([^"]+)"/)
+  return filenameMatch ? filenameMatch[1] : fallback
+}
+
 // 请求拦截器
 api.interceptors.request.use(
   async (config) => {
@@ -62,8 +119,8 @@ api.interceptors.request.use(
     }
 
     config.baseURL = apiConfigManager.getBaseUrl()
-    // 添加请求ID用于追踪
-    config.metadata = { startTime: Date.now() }
+    // Refresh timing while preserving the retry budget across api.request(config).
+    config.metadata = { ...config.metadata, startTime: Date.now() }
     return config
   },
   (error) => {
@@ -103,17 +160,17 @@ api.interceptors.response.use(
     
     // 保持原有的错误对象结构，确保向后兼容
     if (error.response?.status === 429) {
-      const message = error.response?.data?.detail || '系统正在处理其他项目，请稍后再试'
+      const message = error.response?.data?.detail || t("系统正在处理其他项目，请稍后再试")
       error.userMessage = message
     }
     else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      error.userMessage = '请求超时，项目可能仍在后台处理中，请稍后查看项目状态'
+      error.userMessage = t("请求超时，项目可能仍在后台处理中，请稍后查看项目状态")
     }
     else if (error.code === 'NETWORK_ERROR' || !error.response) {
-      error.userMessage = '网络连接失败，请检查网络连接'
+      error.userMessage = t("网络连接失败，请检查网络连接")
     }
     else if (error.response?.status >= 500) {
-      error.userMessage = '服务器内部错误，请稍后重试'
+      error.userMessage = t("服务器内部错误，请稍后重试")
     }
     
     return Promise.reject(error)
@@ -186,6 +243,8 @@ export interface BilibiliDownloadTask {
 
 // 设置相关API
 export const settingsApi = {
+  getOutputBranding: (): Promise<{ enabled: boolean }> => api.get('/settings/output-branding'),
+  setOutputBranding: (enabled: boolean): Promise<{ enabled: boolean }> => api.put('/settings/output-branding', { enabled }),
   // 获取系统配置
   getSettings: (): Promise<any> => {
     return api.get('/settings')
@@ -197,16 +256,41 @@ export const settingsApi = {
   },
 
   // 测试API密钥
-  testApiKey: (provider: string, apiKey: string): Promise<{ success: boolean; error?: string }> => {
-    return api.post('/settings/test-api', { 
+  testApiKey: (
+    provider: string,
+    apiKey: string,
+    options: { baseUrl?: string; model?: string } = {}
+  ): Promise<{ success: boolean; error?: string }> => {
+    return observeOperation('provider_test', { provider }, () => api.post<unknown, { success: boolean; error?: string }>('/settings/test-api', {
       provider, 
-      api_key: apiKey
-    })
+      api_key: apiKey,
+      base_url: options.baseUrl,
+      model: options.model,
+    }), (result) => { captureBusinessEvent('provider_test_finished', { provider, outcome: result.success ? 'success' : 'failed' }) })
   },
 
-  // 获取所有可用模型
-  getAvailableModels: (): Promise<any> => {
-    return api.get('/settings/available-models')
+  // 云端提供商模型名单：内置常用 + 有密钥时实时拉取服务商 /models
+  getAvailableModels: (
+    params: { provider?: string; baseUrl?: string; apiKey?: string; refresh?: boolean } = {}
+  ): Promise<{
+    provider: string
+    source: 'catalog' | 'live'
+    reachable: boolean
+    default_model: string
+    models: string[]
+    catalog: Record<string, string[]>
+    vision_models?: string[]
+    image_models?: string[]
+    error?: string
+  }> => {
+    return api.get('/settings/available-models', {
+      params: {
+        provider: params.provider,
+        base_url: params.baseUrl,
+        api_key: params.apiKey,
+        refresh: params.refresh ? true : undefined,
+      },
+    })
   },
 
   // 获取当前提供商信息
@@ -214,13 +298,36 @@ export const settingsApi = {
     return api.get('/settings/current-provider')
   },
 
+  // 本地 OpenAI 兼容服务（Ollama / LM Studio / vLLM）实际提供的模型列表
+  listCompatibleModels: (
+    params: { provider?: string; baseUrl?: string; apiKey?: string }
+  ): Promise<{ reachable: boolean; base_url: string; models: string[]; error?: string }> => {
+    return api.get('/settings/compatible-models', {
+      params: { provider: params.provider, base_url: params.baseUrl, api_key: params.apiKey },
+    })
+  },
+
   // 检查桌面模式
   checkDesktopMode: (): Promise<{ is_desktop_mode: boolean; environment: any }> => {
     return api.get('/settings/desktop-mode')
-  }
+  },
+
+  getPrivacy: (): Promise<{ crash_reports: boolean }> => {
+    return api.get('/settings/privacy')
+  },
+
+  updatePrivacy: (privacy: { crash_reports: boolean }): Promise<{ crash_reports: boolean }> => {
+    return api.put('/settings/privacy', privacy)
+  },
 }
 
 // 项目相关API
+/** Bundled project with real media; creating it does not require a model key. */
+export const exampleProjectApi = {
+  info: () => api.get<unknown, { available: boolean; project_id: string | null }>('/example-project'),
+  create: () => api.post<unknown, { project_id: string; name: string; resolution: 'created' | 'reused'; example_version: number }>('/example-project/create'),
+}
+
 export const projectApi = {
   // 获取视频分类配置
   getVideoCategories: async (): Promise<VideoCategoriesResponse> => {
@@ -231,12 +338,16 @@ export const projectApi = {
   getProjects: async (): Promise<Project[]> => {
     const response = await api.get('/projects/')
     // 处理分页响应结构，返回items数组
-    return (response as any).items || response || []
+    const projects = (response as any).items || response || []
+    if (Array.isArray(projects)) projects.forEach(p => workflow.rememberProject(p.id, projectProperties(p)))
+    return projects
   },
 
   // 获取单个项目
   getProject: async (id: string): Promise<Project> => {
-    return api.get(`/projects/${id}`)
+    const project = await api.get<unknown, Project>(`/projects/${id}`)
+    workflow.rememberProject(id, projectProperties(project))
+    return project
   },
 
   // 上传文件并创建项目
@@ -252,10 +363,14 @@ export const projectApi = {
     }
     
     try {
-      const project = await api.post<unknown, Project>('/projects/upload', formData, {
+      const project = await observeOperation('import', { source_type: 'upload' }, () => api.post<unknown, Project>('/projects/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+      }), (created, startedAt, props) => {
+        workflow.rememberProject(created.id, { material_origin: 'user' })
+        workflow.watch('project', created.id, undefined, startedAt)
+        captureBusinessEvent('import_finished', { ...props, project_id: created.id, outcome: 'completed', stage: 'upload_received' })
       })
       trackVideoImported({
         source: 'upload',
@@ -280,12 +395,14 @@ export const projectApi = {
 
   // 开始处理项目
   startProcessing: async (id: string): Promise<void> => {
-    await api.post(`/projects/${id}/process`)
+    await observeOperation('processing', { project_id: id, action: 'start' }, () => api.post(`/projects/${id}/process`),
+      (_result, startedAt) => workflow.watch('project', id, undefined, startedAt))
   },
 
   // 重试处理项目
   retryProcessing: async (id: string): Promise<void> => {
-    await api.post(`/projects/${id}/retry`)
+    await observeOperation('processing', { project_id: id, action: 'retry' }, () => api.post(`/projects/${id}/retry`),
+      (_result, startedAt) => workflow.watch('project', id, undefined, startedAt))
   },
 
   // 获取处理状态
@@ -372,7 +489,8 @@ export const projectApi = {
 
   // 重启指定步骤
   restartStep: async (id: string, step: number): Promise<void> => {
-    await api.post(`/projects/${id}/restart-step`, { step })
+    await observeOperation('processing', { project_id: id, action: 'restart_step', step }, () => api.post(`/projects/${id}/restart-step`, { step }),
+      (_result, startedAt) => workflow.watch('project', id, undefined, startedAt))
   },
 
   // 更新切片信息
@@ -428,16 +546,16 @@ export const projectApi = {
 
   // 下载切片视频
   downloadClip: (_projectId: string, clipId: string): Promise<Blob> => {
-    return api.get(`/files/projects/${_projectId}/clips/${clipId}`, {
+    return observeDownload({ project_id: _projectId, artifact_type: 'clip' }, () => api.get<unknown, Blob>(`/files/projects/${_projectId}/clips/${clipId}`, {
       responseType: 'blob'
-    })
+    }))
   },
 
   // 下载合集视频
   downloadCollection: (projectId: string, collectionId: string): Promise<Blob> => {
-    return api.get(`/files/projects/${projectId}/collections/${collectionId}`, {
+    return observeDownload({ project_id: projectId, artifact_type: 'collection' }, () => api.get<unknown, Blob>(`/files/projects/${projectId}/collections/${collectionId}`, {
       responseType: 'blob'
-    })
+    }))
   },
 
   // 导出元数据
@@ -453,58 +571,44 @@ export const projectApi = {
   },
 
   downloadVideo: async (projectId: string, clipId?: string, collectionId?: string) => {
-    let url = `/projects/${projectId}/download`
+    let path = `/projects/${projectId}/download`
     if (clipId) {
-      url += `?clip_id=${clipId}`
+      path += `?clip_id=${encodeURIComponent(clipId)}`
     } else if (collectionId) {
-      url += `?collection_id=${collectionId}`
+      path += `?collection_id=${encodeURIComponent(collectionId)}`
     }
-    
+
     try {
-      // 对于blob类型的响应，需要直接使用axios而不是经过拦截器
-      const response = await axios.get(`/api/v1${url}`, { 
+      const url = await resolveMediaUrl(path)
+      // 桌面端 <a download> 在 macOS WKWebView 里会被取消，改由壳写入「下载」文件夹。
+      if (isTauriRuntime()) {
+        const saved = await saveWithSystemDownload(url, {
+          project_id: projectId,
+          artifact_type: clipId ? 'clip' : collectionId ? 'collection' : 'original',
+        })
+        trackClipsExported({
+          clipCount: 1,
+          exportType: clipId ? 'clip' : collectionId ? 'collection' : 'project',
+        })
+        return saved
+      }
+
+      // blob 响应不走 api 拦截器，否则拿不到 Content-Disposition。
+      const response = await observeMediaResponse({ project_id: projectId, artifact_type: clipId ? 'clip' : collectionId ? 'collection' : 'original' }, () => axios.get<Blob>(url, {
         responseType: 'blob',
         headers: {
           'Accept': 'application/octet-stream'
         }
-      })
-      
-      // 从响应头获取文件名，如果没有则使用默认名称
-      const contentDisposition = response.headers['content-disposition']
-      let filename = clipId ? `clip_${clipId}.mp4` : 
-                     collectionId ? `collection_${collectionId}.mp4` : 
-                     `project_${projectId}.mp4`
-      
-      if (contentDisposition) {
-        // 优先尝试解析 RFC 6266 格式的 filename* 参数
-        const filenameStarMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/)
-        if (filenameStarMatch) {
-          filename = decodeURIComponent(filenameStarMatch[1])
-        } else {
-          // 回退到传统的 filename 参数
-          const filenameMatch = contentDisposition.match(/filename="([^"]+)"/)
-          if (filenameMatch) {
-            filename = filenameMatch[1]
-          }
-        }
-      }
-      
-      // 创建下载链接
-      const blob = new Blob([response.data], { type: 'video/mp4' })
-      const downloadUrl = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = filename
-      
-      // 触发下载
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(downloadUrl)
+      }))
+
+      const filename = filenameFromDisposition(
+        response.headers['content-disposition'],
+        clipId ? `clip_${clipId}.mp4` : collectionId ? `collection_${collectionId}.mp4` : `project_${projectId}.mp4`,
+      )
+      saveBlobDownload(response.data, filename)
 
       trackClipsExported({
         clipCount: 1,
-        // 区分导出粒度：单切片 / 合集 / 整片
         exportType: clipId ? 'clip' : collectionId ? 'collection' : 'project',
       })
       return response.data
@@ -529,22 +633,54 @@ export const projectApi = {
     return `${api.defaults.baseURL}/projects/${projectId}/video`
   },
 
-  // 获取切片视频URL
+  // 获取切片视频URL。必须带上桌面端已经解析出的后端地址，不能用根路径。
   getClipVideoUrl: (projectId: string, clipId: string, _clipTitle?: string): string => {
-    // 使用projects路由获取切片视频
-    return `/api/v1/projects/${projectId}/clips/${clipId}`
+    return mediaUrl(`/projects/${projectId}/clips/${encodeURIComponent(clipId)}`)
   },
 
   // 获取合集视频URL
   getCollectionVideoUrl: (projectId: string, collectionId: string): string => {
-    // 使用files路由获取合集视频
-    return `/api/v1/files/projects/${projectId}/collections/${collectionId}`
+    return mediaUrl(`/files/projects/${projectId}/collections/${encodeURIComponent(collectionId)}`)
   },
 
   // 生成项目缩略图
   generateThumbnail: async (projectId: string): Promise<{success: boolean, thumbnail: string, message: string}> => {
     return api.post(`/projects/${projectId}/generate-thumbnail`)
-  }
+  },
+
+  startClipExport: async (
+    projectId: string,
+    clipId: string,
+    body: { preset: string; subtitles?: boolean; title_card?: boolean }
+  ): Promise<{ ok: boolean; job_id: string; status: string }> => {
+    return observeOperation('publish_export', { project_id: projectId, preset: body.preset, subtitles: body.subtitles, title_card: body.title_card },
+      () => api.post<unknown, { ok: boolean; job_id: string; status: string }>(`/projects/${projectId}/clips/${clipId}/export`, body),
+      (job, startedAt) => { if (job.ok) workflow.watch('export', job.job_id, projectId, startedAt) })
+  },
+
+  getExportJob: async (projectId: string, jobId: string, signal?: AbortSignal): Promise<{
+    job_id: string
+    status: 'queued' | 'running' | 'completed' | 'failed'
+    percent?: number
+    error?: string
+    result?: { path: string; title?: string; width?: number; height?: number; warnings?: string[] }
+  }> => {
+    return api.get(`/projects/${projectId}/exports/${jobId}`, { signal })
+  },
+
+  downloadExport: async (projectId: string, jobId: string) => {
+    const url = await resolveMediaUrl(`/projects/${projectId}/exports/${encodeURIComponent(jobId)}/download`)
+    if (isTauriRuntime()) {
+      await saveWithSystemDownload(url, { project_id: projectId, export_id: jobId, artifact_type: 'publish_clip' })
+      return
+    }
+    const response = await observeMediaResponse({ project_id: projectId, export_id: jobId, artifact_type: 'publish_clip' }, () => axios.get<Blob>(url, {
+      responseType: 'blob',
+      headers: { Accept: 'application/octet-stream' },
+    }))
+    const filename = filenameFromDisposition(response.headers['content-disposition'], `export_${jobId.slice(0, 8)}.mp4`)
+    saveBlobDownload(response.data, filename)
+  },
 }
 
 // 视频下载相关API
@@ -579,14 +715,16 @@ export const bilibiliApi = {
 
   // 创建B站下载任务
   createDownloadTask: async (data: BilibiliDownloadRequest): Promise<BilibiliDownloadTask> => {
-    const task = await api.post<unknown, BilibiliDownloadTask>('/bilibili/download', data)
+    const task = await observeOperation('import', { source_type: 'bilibili' }, () => api.post<unknown, BilibiliDownloadTask>('/bilibili/download', data),
+      (created, startedAt) => workflow.watch('bilibili', created.id, undefined, startedAt))
     trackVideoImported({ source: 'url', fileType: 'bilibili' })
     return task
   },
 
   // 创建YouTube下载任务
   createYouTubeDownloadTask: async (data: BilibiliDownloadRequest): Promise<BilibiliDownloadTask> => {
-    const task = await api.post<unknown, BilibiliDownloadTask>('/youtube/download', data)
+    const task = await observeOperation('import', { source_type: 'youtube' }, () => api.post<unknown, BilibiliDownloadTask>('/youtube/download', data),
+      (created, startedAt) => workflow.watch('youtube', created.id, undefined, startedAt))
     trackVideoImported({ source: 'url', fileType: 'youtube' })
     return task
   },
@@ -629,6 +767,7 @@ export interface WhisperRuntimeStatus {
   status: 'unknown' | 'not_installed' | 'installing' | 'installed' | 'error'
   progress: number
   message: string
+  error_code?: string
   log_tail?: string
   platform_supported: boolean
   packages: string[]
@@ -645,6 +784,14 @@ export interface WhisperModel {
   downloadProgress?: number | null
   localPath?: string | null
   errorMessage?: string | null
+  source?: 'huggingface' | 'hf-mirror' | 'custom' | null
+}
+
+/** 200 installed: already on disk. 202 downloading: started in the background; poll the model status. */
+export interface WhisperModelDownload {
+  status: 'installed' | 'downloading'
+  model: string
+  message: string
 }
 
 // 语音识别 / Whisper 运行时与模型管理
@@ -653,7 +800,7 @@ export const speechApi = {
   installRuntime: (): Promise<{ started: boolean; message: string }> => api.post('/whisper/install'),
   uninstallRuntime: (): Promise<{ success: boolean; message: string }> => api.post('/whisper/uninstall'),
   getModels: (): Promise<WhisperModel[]> => api.get('/whisper-models'),
-  downloadModel: (model: string): Promise<unknown> => api.post('/whisper-models/download', { model }),
+  downloadModel: (model: string): Promise<WhisperModelDownload> => api.post('/whisper-models/download', { model }),
   deleteModel: (model: string): Promise<unknown> => api.delete(`/whisper-models/${model}`),
 }
 

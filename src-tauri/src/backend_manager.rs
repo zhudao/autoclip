@@ -30,6 +30,8 @@ impl Default for BackendStatus {
 pub struct BackendManager {
     status: Arc<Mutex<BackendStatus>>,
     process: Arc<Mutex<Option<Child>>>,
+    #[cfg(windows)]
+    job: Mutex<Option<crate::windows_job::BackendJob>>,
 }
 
 struct BackendLaunch {
@@ -43,6 +45,8 @@ impl BackendManager {
         Self {
             status: Arc::new(Mutex::new(BackendStatus::default())),
             process: Arc::new(Mutex::new(None)),
+            #[cfg(windows)]
+            job: Mutex::new(None),
         }
     }
 
@@ -61,23 +65,81 @@ impl BackendManager {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .env("AUTOCLIP_DESKTOP_MODE", "true")
-            .env("AUTOCLIP_MODE", "desktop");
+            .env("AUTOCLIP_MODE", "desktop")
+            .env(
+                "AUTOCLIP_BUILD_ENVIRONMENT",
+                if cfg!(debug_assertions) { "development" } else { "production" },
+            )
+            // Keep signed bundle resources immutable, including Python startup imports.
+            .env("PYTHONDONTWRITEBYTECODE", "1")
+            // Single source of truth for the version the backend reports in /settings.
+            .env("AUTOCLIP_APP_VERSION", env!("CARGO_PKG_VERSION"))
+            // The backend exits when this process is gone, even after kill -9 or a crash
+            // (macOS has no Job Object; on Windows the job already covers it).
+            .env("AUTOCLIP_PARENT_PID", std::process::id().to_string());
+
+        // 崩溃上报：构建时若注入了 SENTRY_DSN，传给 Python 后端（未配置则为空，sentry_setup no-op）
+        if let Some(dsn) = option_env!("SENTRY_DSN") {
+            cmd.env("SENTRY_DSN", dsn);
+        }
 
         // Point the backend at the bundled ffmpeg/ffprobe when present.
         // The backend's ffmpeg_utils reads these env vars before falling back
         // to PATH, so this is what makes video processing work on machines
         // without a system ffmpeg installed.
-        let ffmpeg_bin = launch.working_dir.join("ffmpeg").join("ffmpeg");
+        let ffmpeg_bin = launch
+            .working_dir
+            .join("ffmpeg")
+            .join(Self::exe_name("ffmpeg"));
         if ffmpeg_bin.is_file() {
             cmd.env("AUTOCLIP_FFMPEG_PATH", &ffmpeg_bin);
         }
-        let ffprobe_bin = launch.working_dir.join("ffmpeg").join("ffprobe");
+        let ffprobe_bin = launch
+            .working_dir
+            .join("ffmpeg")
+            .join(Self::exe_name("ffprobe"));
         if ffprobe_bin.is_file() {
             cmd.env("AUTOCLIP_FFPROBE_PATH", &ffprobe_bin);
         }
 
+        // The backend prints emoji/Chinese to stdout; with a piped stdout on
+        // Windows Python falls back to the ANSI code page and dies with
+        // UnicodeEncodeError before it ever reaches "PORT=". Force UTF-8.
+        cmd.env("PYTHONUTF8", "1");
+        cmd.env("PYTHONIOENCODING", "utf-8");
+
+        // Backend defaults its data dir to ~/Library/Application Support/AutoClip,
+        // which only makes sense on macOS. Resolve the platform data dir here
+        // (%APPDATA%\AutoClip on Windows, ~/.local/share/AutoClip on Linux) —
+        // on macOS this is exactly the old default, so existing installs keep
+        // their data.
+        let app_dir = crate::telemetry_runtime::app_dir(app_handle.path().data_dir().ok());
+        crate::telemetry_runtime::configure_backend(&mut cmd, app_dir.as_deref());
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            // Without this every launch pops a black console window for python.exe.
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+
         match cmd.spawn() {
-            Ok(child) => {
+            #[allow(unused_mut)]
+            Ok(mut child) => {
+                #[cfg(windows)]
+                {
+                    // Own the complete process tree, including Celery/ffmpeg.
+                    // Closing the app handle (even on a crash) releases DLL locks.
+                    match crate::windows_job::BackendJob::attach(&child) {
+                        Ok(job) => *self.job.lock().unwrap() = Some(job),
+                        Err(error) => {
+                            let _ = child.kill();
+                            let _ = child.wait();
+                            return Err(format!("无法管理后端进程生命周期: {error}"));
+                        }
+                    }
+                }
                 let pid = child.id();
                 let start_time = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
@@ -112,14 +174,23 @@ impl BackendManager {
 
     pub fn stop(&self) -> Result<(), String> {
         let mut status = self.status.lock().unwrap();
-        if !status.is_running {
-            return Err("后端服务未运行".to_string());
-        }
-
         let mut process = self.process.lock().unwrap();
+        #[cfg(windows)]
+        let terminated_tree = {
+            let job = self.job.lock().unwrap().take();
+            let owned = job.is_some();
+            drop(job);
+            owned
+        };
+        #[cfg(not(windows))]
+        let terminated_tree = false;
         if let Some(mut child) = process.take() {
-            if let Err(e) = child.kill() {
-                return Err(format!("停止后端服务失败: {}", e));
+            if !terminated_tree && child.try_wait().map_err(|e| e.to_string())?.is_none() {
+                if let Err(error) = child.kill() {
+                    // Retain ownership if termination failed so it can be retried.
+                    *process = Some(child);
+                    return Err(format!("停止后端服务失败: {error}"));
+                }
             }
             let _ = child.wait();
         }
@@ -172,7 +243,7 @@ impl BackendManager {
                     continue;
                 }
 
-                let venv_python = backend_work_dir.join("venv").join("bin").join("python");
+                let venv_python = Self::venv_python(&backend_work_dir);
                 if venv_python.exists() {
                     return Ok(Self::python_launch(
                         venv_python.to_string_lossy().to_string(),
@@ -180,8 +251,10 @@ impl BackendManager {
                     ));
                 }
 
-                // python-build-standalone bundle: resources/python/bin/python3
-                let pbs_python = backend_work_dir.join("python").join("bin").join("python3");
+                // python-build-standalone bundle:
+                //   unix:    resources/python/bin/python3
+                //   windows: resources/python/python.exe
+                let pbs_python = Self::pbs_python(&backend_work_dir);
                 if pbs_python.exists() {
                     return Ok(Self::python_launch(
                         pbs_python.to_string_lossy().to_string(),
@@ -189,10 +262,8 @@ impl BackendManager {
                     ));
                 }
 
-                if Command::new("python3").arg("--version").output().is_ok() {
-                    return Ok(Self::python_launch("python3".to_string(), backend_work_dir));
-                } else if Command::new("python").arg("--version").output().is_ok() {
-                    return Ok(Self::python_launch("python".to_string(), backend_work_dir));
+                if let Some(system_python) = Self::system_python() {
+                    return Ok(Self::python_launch(system_python, backend_work_dir));
                 }
             }
         }
@@ -202,21 +273,16 @@ impl BackendManager {
             if let Some(project_root) = current_dir.parent() {
                 let backend_dir = project_root.join("backend");
                 if backend_dir.exists() {
-                    let venv_python = project_root.join("venv").join("bin").join("python");
+                    let venv_python = Self::venv_python(project_root);
                     if venv_python.exists() {
                         return Ok(Self::python_launch(
                             venv_python.to_string_lossy().to_string(),
                             project_root.to_path_buf(),
                         ));
                     }
-                    if Command::new("python3").arg("--version").output().is_ok() {
+                    if let Some(system_python) = Self::system_python() {
                         return Ok(Self::python_launch(
-                            "python3".to_string(),
-                            project_root.to_path_buf(),
-                        ));
-                    } else if Command::new("python").arg("--version").output().is_ok() {
-                        return Ok(Self::python_launch(
-                            "python".to_string(),
+                            system_python,
                             project_root.to_path_buf(),
                         ));
                     }
@@ -227,22 +293,58 @@ impl BackendManager {
         if let Ok(current_dir) = std::env::current_dir() {
             let backend_dir = current_dir.join("backend");
             if backend_dir.exists() {
-                let venv_python = current_dir.join("venv").join("bin").join("python");
+                let venv_python = Self::venv_python(&current_dir);
                 if venv_python.exists() {
                     return Ok(Self::python_launch(
                         venv_python.to_string_lossy().to_string(),
                         current_dir,
                     ));
                 }
-                if Command::new("python3").arg("--version").output().is_ok() {
-                    return Ok(Self::python_launch("python3".to_string(), current_dir));
-                } else if Command::new("python").arg("--version").output().is_ok() {
-                    return Ok(Self::python_launch("python".to_string(), current_dir));
+                if let Some(system_python) = Self::system_python() {
+                    return Ok(Self::python_launch(system_python, current_dir));
                 }
             }
         }
 
         Err("找不到可用的 Python 环境或后端代码".to_string())
+    }
+
+    fn exe_name(base: &str) -> String {
+        if cfg!(target_os = "windows") {
+            format!("{}.exe", base)
+        } else {
+            base.to_string()
+        }
+    }
+
+    fn venv_python(root: &std::path::Path) -> PathBuf {
+        if cfg!(target_os = "windows") {
+            root.join("venv").join("Scripts").join("python.exe")
+        } else {
+            root.join("venv").join("bin").join("python")
+        }
+    }
+
+    fn pbs_python(root: &std::path::Path) -> PathBuf {
+        if cfg!(target_os = "windows") {
+            root.join("python").join("python.exe")
+        } else {
+            root.join("python").join("bin").join("python3")
+        }
+    }
+
+    /// First interpreter on PATH that answers `--version`. On Windows `python3`
+    /// is usually the Microsoft Store stub, so prefer plain `python` there.
+    fn system_python() -> Option<String> {
+        let candidates: [&str; 2] = if cfg!(target_os = "windows") {
+            ["python", "python3"]
+        } else {
+            ["python3", "python"]
+        };
+        candidates
+            .iter()
+            .find(|name| Command::new(name).arg("--version").output().is_ok())
+            .map(|name| name.to_string())
     }
 
     fn python_launch(program: String, working_dir: PathBuf) -> BackendLaunch {

@@ -69,9 +69,10 @@ docs/
 
 # Scripts
 *.sh
-!start_autoclip.sh
-!stop_autoclip.sh
-!status_autoclip.sh
+# Container entrypoints are COPY'd by Dockerfile / Dockerfile.dev; excluding
+# them makes `docker build` fail with "/docker-entrypoint.sh: not found".
+!docker-entrypoint.sh
+!docker-dev-entrypoint.sh
 
 # Environment
 .env
@@ -79,6 +80,9 @@ docs/
 .env.development
 .env.test
 .env.production
+.env.*
+# Never copy updater signing keys into a Docker build context.
+.updater-private-key*
 
 # Backup
 cleanup_backup/
@@ -103,3 +107,5 @@ dump.rdb
 
 # PID files
 *.pid
+*.pid.json
+*.pid.tmp

@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from ...core.config import get_data_directory
+from ...utils.ffmpeg_utils import ytdlp_ffmpeg_options
 import uuid
 import asyncio
 from datetime import datetime
@@ -23,6 +24,16 @@ router = APIRouter()
 
 # 存储下载任务的状态
 download_tasks = {}
+
+# 一次请求过多字幕语言会触发 YouTube 的 HTTP 429 并让整次下载失败；
+# 默认只请求中英文，可用 AUTOCLIP_YT_SUBTITLE_LANGS（逗号分隔）覆盖。
+DEFAULT_SUBTITLE_LANGS = ['zh-Hans', 'zh', 'en']
+
+
+def get_subtitle_langs() -> list:
+    raw = os.getenv('AUTOCLIP_YT_SUBTITLE_LANGS', '')
+    langs = [lang.strip() for lang in raw.split(',') if lang.strip()]
+    return langs or list(DEFAULT_SUBTITLE_LANGS)
 
 
 @contextmanager
@@ -97,9 +108,9 @@ async def parse_youtube_video(
         import asyncio
         
         def extract_info_sync(url, browser):
-            # 构建 yt-dlp 命令
+            # 用当前解释器的 yt_dlp 模块，保证与后端运行环境（venv / Docker / 桌面便携 Python）一致
             cmd = [
-                '/Users/zhoukk/autoclip/venv/bin/yt-dlp',
+                sys.executable, '-m', 'yt_dlp',
                 '--ignore-config',
                 '--no-warnings',
                 '--no-playlist',
@@ -132,7 +143,7 @@ async def parse_youtube_video(
                     capture_output=True,
                     text=True,
                     timeout=60,
-                    cwd='/Users/zhoukk/autoclip',
+                    cwd=str(get_data_directory()),
                     env=env
                 )
 
@@ -174,6 +185,8 @@ async def parse_youtube_video(
             }
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"解析YouTube视频失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"解析失败: {str(e)}")
@@ -190,6 +203,9 @@ async def create_youtube_download_task(request: YouTubeDownloadRequest):
         
         ydl_opts = {
             'quiet': True,
+            'socket_timeout': 30,
+            'retries': 2,
+            'extractor_retries': 2,
             'no_warnings': True,
             'ignoreconfig': True,
             'noplaylist': True,
@@ -342,6 +358,11 @@ async def get_all_youtube_tasks():
 
 async def update_project_download_progress(project_id: str, progress: float, message: str):
     """更新项目下载进度"""
+    save_project_download_progress(project_id, progress, message)
+
+
+def save_project_download_progress(project_id: str, progress: float, message: str):
+    """同步写进度，yt-dlp 的下载线程里也能直接调。"""
     try:
         from ...core.database import SessionLocal
         from ...services.project_service import ProjectService
@@ -352,11 +373,9 @@ async def update_project_download_progress(project_id: str, progress: float, mes
             project = project_service.get(project_id)
             
             if project:
-                # 更新项目设置中的下载进度
-                if not project.processing_config:
-                    project.processing_config = {}
-                
-                project.processing_config.update({
+                # 必须换成新 dict。原地 update JSON 列不会落库，进度会停在创建时的 0%。
+                from ...services.download_progress import save_processing_config
+                save_processing_config(project, {
                     "download_progress": progress,
                     "download_message": message
                 })
@@ -375,6 +394,41 @@ async def update_project_download_progress(project_id: str, progress: float, mes
     except Exception as e:
         logger.error(f"更新项目下载进度失败: {e}")
 
+
+# 下载阶段在总进度里占 30%→60%
+DOWNLOAD_PROGRESS_START = 30.0
+DOWNLOAD_PROGRESS_END = 60.0
+
+
+def make_download_progress_hook(project_id: str, task_id: str, min_interval: float = 1.0):
+    """yt-dlp progress_hooks：把真实下载百分比映射到 30%→60%。
+
+    以前下载期间进度从 30 直接跳到 60，大视频下载几分钟里一直不动，用户以为卡死了。
+    音视频分两个文件下载时百分比会回落，只取单调递增的值；最多每秒写一次库。
+    """
+    import time
+    state = {"last_write": 0.0, "last_value": DOWNLOAD_PROGRESS_START}
+
+    def hook(d):
+        if d.get("status") != "downloading":
+            return
+        total = d.get("total_bytes") or d.get("total_bytes_estimate")
+        downloaded = d.get("downloaded_bytes") or 0
+        if not total:
+            return
+        fraction = max(0.0, min(1.0, downloaded / total))
+        value = round(DOWNLOAD_PROGRESS_START + fraction * (DOWNLOAD_PROGRESS_END - DOWNLOAD_PROGRESS_START - 1), 1)
+        now = time.monotonic()
+        if value <= state["last_value"] or now - state["last_write"] < min_interval:
+            return
+        state["last_value"], state["last_write"] = value, now
+        task = download_tasks.get(task_id)
+        if task is not None:
+            task.progress = value
+        save_project_download_progress(project_id, value, f"正在下载视频... {int(fraction * 100)}%")
+
+    return hook
+
 async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRequest, project_id: str):
     """处理YouTube下载任务"""
     try:
@@ -391,8 +445,12 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
         from ...core.config import get_data_directory
         
         data_dir = get_data_directory()
-        download_dir = data_dir / "temp"
-        download_dir.mkdir(exist_ok=True)
+        # Each attempt owns its files, including retries of the same task.
+        # Never discover media in a directory shared with another download.
+        import tempfile
+        temp_root = data_dir / "temp"
+        temp_root.mkdir(parents=True, exist_ok=True)
+        download_dir = Path(tempfile.mkdtemp(prefix="youtube-", dir=temp_root))
         
         # 更新项目进度
         await update_project_download_progress(project_id, 30.0, "正在下载视频...")
@@ -400,9 +458,11 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
         # 设置下载选项
         ydl_opts = {
             'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            # 合并后统一成 mp4，下面按 *.mp4 找文件
+            'merge_output_format': 'mp4',
             'writesubtitles': True,
             'writeautomaticsub': True,  # 下载自动生成的字幕
-            'subtitleslangs': ['en', 'zh-Hans', 'zh', 'en-US', 'auto'],  # 英文和中文字幕，包括自动检测
+            'subtitleslangs': get_subtitle_langs(),
             'subtitlesformat': 'srt',
             'outtmpl': str(download_dir / '%(title)s.%(ext)s'),
             'noplaylist': True,
@@ -411,6 +471,8 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
             'ignoreconfig': True,
             'config_locations': [],
             'cachedir': False,
+            'progress_hooks': [make_download_progress_hook(project_id, task_id)],
+            **ytdlp_ffmpeg_options(),
         }
         
         if request.browser:
@@ -422,9 +484,8 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
             ydl_opts.setdefault('extractor_args', {}).setdefault('youtube', {}).setdefault('player_client', []).append(yt_client_env)
         
         def download_sync(url, ydl_opts):
-            with sanitized_yt_env():
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    return ydl.download([url])
+            from backend.utils.download_recovery import download_with_recovery
+            return download_with_recovery(url, ydl_opts)
         
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, download_sync, request.url, ydl_opts)
@@ -438,6 +499,7 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
         
         video_path = str(video_files[0])
         subtitle_path = str(subtitle_files[0]) if subtitle_files else ""
+        subtitle_error = None
         
         download_tasks[task_id].progress = 80.0
         
@@ -455,7 +517,7 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
                 video_file_path = Path(video_path)
                 
                 # 根据视频信息选择合适的模型
-                model = "base"  # 默认使用平衡模型
+                model = None  # Use the configured local transcription model
                 language = "auto"  # 默认自动检测语言
                 
                 # 可以根据视频标题判断内容类型
@@ -475,7 +537,8 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
                 await update_project_download_progress(project_id, 90.0, "字幕生成完成，正在准备处理...")
                 
             except SpeechRecognitionError as e:
-                logger.error(f"Whisper字幕生成失败: {e}")
+                logger.warning("Whisper字幕生成失败: %s", e)
+                whisper_error = str(e)
                 # Whisper失败时，尝试多种策略获取平台字幕作为备用
                 logger.info("尝试下载平台字幕作为备用方案")
                 try:
@@ -484,13 +547,16 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
                         logger.info(f"备用字幕获取成功: {subtitle_path}")
                     else:
                         logger.warning("所有字幕获取策略都失败了")
-                        subtitle_path = None  # 确保字幕路径为空，后续会标记项目失败
+                        subtitle_path = None
+                        subtitle_error = whisper_error
                 except Exception as backup_error:
-                    logger.error(f"备用字幕获取也失败: {backup_error}")
-                    subtitle_path = None  # 确保字幕路径为空，后续会标记项目失败
+                    logger.warning("备用字幕获取也失败: %s", type(backup_error).__name__)
+                    subtitle_path = None
+                    subtitle_error = whisper_error
             except Exception as e:
-                logger.error(f"生成字幕过程中发生未知错误: {e}")
-                subtitle_path = None  # 确保字幕路径为空，后续会标记项目失败
+                logger.warning("生成字幕过程中发生未知错误: %s", type(e).__name__)
+                subtitle_path = None
+                subtitle_error = "本地 Whisper 生成字幕失败。请到「设置 → 转写」确认模型已下载，并检查视频有可播放的音轨。"
         
         logger.info(f"下载完成 - 视频文件: {video_path}, 字幕文件: {subtitle_path}")
         
@@ -498,6 +564,7 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
         from ...services.project_service import ProjectService
         from ...core.database import SessionLocal
         
+        saved_project_id = None
         db = SessionLocal()
         try:
             project_service = ProjectService(db)
@@ -511,11 +578,9 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
             project.description = f"从YouTube下载: {request.project_name}"
             # 注意：不要在这里设置video_path，等文件移动完成后再设置
             
-            # 更新项目设置
-            if not project.processing_config:
-                project.processing_config = {}
-            
-            project.processing_config.update({
+            # 更新项目设置。赋新 dict，避免 JSON 原地修改在提交时丢失。
+            from ...services.download_progress import save_processing_config
+            save_processing_config(project, {
                 "youtube_info": {
                     "title": request.project_name,
                     "uploader": "YouTube",
@@ -536,7 +601,6 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
             
             # 移动视频文件到项目目录
             import shutil
-            from pathlib import Path
             
             if video_path:
                 video_file_path = Path(video_path)
@@ -559,9 +623,8 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
                     logger.info(f"字幕文件已移动到: {new_subtitle_path}")
                     
                     # 更新项目处理配置中的字幕路径
-                    if not project.processing_config:
-                        project.processing_config = {}
-                    project.processing_config["subtitle_path"] = str(new_subtitle_path)
+                    from ...services.download_progress import save_processing_config
+                    save_processing_config(project, {"subtitle_path": str(new_subtitle_path)})
             
             # 保存项目更新
             db.commit()
@@ -572,14 +635,16 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
                 logger.error(f"字幕文件不存在: {srt_file_path}，项目将标记为失败状态")
                 from ...schemas.project import ProjectStatus
                 project.status = ProjectStatus.FAILED
-                if not project.processing_config:
-                    project.processing_config = {}
-                project.processing_config["error_message"] = "字幕文件不存在且Whisper生成失败"
+                from ...services.download_progress import save_processing_config
+                save_processing_config(
+                    project,
+                    {"error_message": subtitle_error or "字幕文件不存在且Whisper生成失败"},
+                )
                 db.commit()
                 
                 # 更新任务状态为失败
                 download_tasks[task_id].status = "failed"
-                download_tasks[task_id].error_message = "字幕文件不存在且Whisper生成失败"
+                download_tasks[task_id].error_message = subtitle_error or "字幕文件不存在且Whisper生成失败"
                 download_tasks[task_id].progress = 0.0
                 download_tasks[task_id].project_id = str(project.id)
                 download_tasks[task_id].updated_at = datetime.now().isoformat()
@@ -600,50 +665,35 @@ async def process_youtube_download_task(task_id: str, request: YouTubeDownloadRe
             download_tasks[task_id].updated_at = datetime.now().isoformat()
             
             logger.info(f"YouTube下载任务完成: {task_id}, 项目ID: {project.id}")
-            
-            # 自动启动处理流程
-            try:
-                # 更新项目状态为等待处理
-                from ...schemas.project import ProjectStatus
-                project.status = ProjectStatus.PENDING  # 改为PENDING，让自动化服务启动
-                db.commit()
-                
-                logger.info(f"YouTube项目 {project.id} 下载完成，等待自动化流水线启动")
-                
-                # 异步启动自动化流水线
-                import asyncio
-                from ...services.auto_pipeline_service import auto_pipeline_service
-                
-                # 使用create_task在已运行的事件循环中执行
-                try:
-                    loop = asyncio.get_running_loop()
-                    # 在已运行的事件循环中创建任务
-                    task = loop.create_task(
-                        auto_pipeline_service.auto_start_pipeline(str(project.id))
-                    )
-                    # 等待任务完成
-                    pipeline_result = await task
-                except RuntimeError:
-                    # 如果没有运行的事件循环，创建新的
-                    pipeline_result = await auto_pipeline_service.auto_start_pipeline(str(project.id))
-                
-                if pipeline_result['status'] == 'started':
-                    logger.info(f"YouTube项目 {project.id} 自动化流水线已启动: {pipeline_result}")
-                else:
-                    logger.warning(f"YouTube项目 {project.id} 自动化流水线启动结果: {pipeline_result}")
-                
-            except Exception as e:
-                logger.error(f"启动YouTube项目 {project.id} 自动化流水线失败: {str(e)}")
-                # 即使处理启动失败，也要返回下载成功
-                # 用户可以通过重试按钮重新启动处理
-            
+
+            from ...schemas.project import ProjectStatus
+            project.status = ProjectStatus.PENDING
+            db.commit()
+
+            logger.info(f"YouTube项目 {project.id} 下载完成，等待自动化流水线启动")
+            saved_project_id = str(project.id)
+
         except Exception as e:
             logger.error(f"创建项目失败: {str(e)}")
             # 即使处理启动失败，也要返回下载成功
             # 用户可以通过重试按钮重新启动处理
-            
+            saved_project_id = None
+
         finally:
             db.close()
+
+        if saved_project_id:
+            try:
+                from ...services.auto_pipeline_service import auto_pipeline_service
+                pipeline_result = await auto_pipeline_service.auto_start_pipeline(saved_project_id)
+                if pipeline_result['status'] == 'started':
+                    logger.info(f"YouTube项目 {saved_project_id} 自动化流水线已启动: {pipeline_result}")
+                else:
+                    logger.warning(f"YouTube项目 {saved_project_id} 自动化流水线启动结果: {pipeline_result}")
+            except Exception as e:
+                logger.error(f"启动YouTube项目 {saved_project_id} 自动化流水线失败: {str(e)}")
+                # 即使处理启动失败，也要返回下载成功
+                # 用户可以通过重试按钮重新启动处理
             
     except Exception as e:
         logger.error(f"处理下载任务失败: {str(e)}")
@@ -685,16 +735,17 @@ async def _try_download_with_different_formats(url: str, download_dir: Path, bro
     for fmt in formats:
         try:
             ydl_opts = {
-                'format': 'best[ext=mp4]/best',
+                'skip_download': True,  # 视频已经下载过，这里只取字幕
                 'writesubtitles': True,
                 'writeautomaticsub': True,
-                'subtitleslangs': ['en', 'zh-Hans', 'zh'],
+                'subtitleslangs': get_subtitle_langs(),
                 'subtitlesformat': fmt,
                 'outtmpl': str(download_dir / f'subtitle_%(title)s.%(ext)s'),
                 'noplaylist': True,
                 'quiet': True,
                 'ignoreconfig': True,
                 'config_locations': [],
+                **ytdlp_ffmpeg_options(),
             }
             
             if browser:
@@ -744,11 +795,12 @@ async def _try_download_with_different_langs(url: str, download_dir: Path, brows
     for langs in lang_combinations:
         try:
             ydl_opts = {
-                'format': 'best[ext=mp4]/best',
+                'skip_download': True,  # 视频已经下载过，这里只取字幕
                 'writesubtitles': True,
                 'writeautomaticsub': True,
                 'subtitleslangs': langs,
                 'subtitlesformat': 'srt',
+                **ytdlp_ffmpeg_options(),
                 'outtmpl': str(download_dir / f'lang_%(title)s.%(ext)s'),
                 'noplaylist': True,
                 'quiet': True,

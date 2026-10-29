@@ -14,17 +14,83 @@ from pydantic import BaseModel, Field, validator
 
 logger = logging.getLogger(__name__)
 
+from backend import __version__
 from backend.core.desktop_config import get_desktop_config, is_desktop_mode, DesktopConfig, save_desktop_config
 from backend.services.config_sync_service import config_sync_service
 from pathlib import Path
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
+from backend.services import ai_model_settings as ai_models
+from backend.services import output_branding
+
+
+@router.get('/output-branding')
+def get_output_branding():
+    return output_branding.load_settings()
+
+
+@router.put('/output-branding')
+def set_output_branding(body: output_branding.BrandingSettings):
+    return output_branding.save_settings(body)
+
+
+@router.get('/ai-models')
+def get_ai_models():
+    return ai_models.public(ai_models.for_editing())
+
+
+@router.put('/ai-models')
+def put_ai_models(body: ai_models.ModelSettings):
+    try:
+        return ai_models.save(body)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class ConnectionModelsRequest(BaseModel):
+    connection: ai_models.Connection
+    refresh: bool = False
+
+
+@router.post('/ai-models/discover')
+async def discover_connection_models(body: ConnectionModelsRequest):
+    from backend.core.model_registry import discover
+    try:
+        connection = ai_models.resolve_secret(body.connection, ai_models.for_editing())
+        return await discover(connection, body.refresh)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class ConnectionTestRequest(BaseModel):
+    connection: ai_models.Connection
+    model: str = Field(min_length=1, max_length=200)
+    vision: bool = False
+
+
+@router.post('/ai-models/test')
+def test_connection_assignment(body: ConnectionTestRequest):
+    from backend.core.llm_providers import LLMProviderFactory, ProviderType
+    try:
+        connection = ai_models.resolve_secret(body.connection, ai_models.for_editing())
+        endpoint = ai_models.chat_endpoint(connection, body.model)
+        if body.vision:
+            from backend.services.studio.vision_settings import test, VisionSettingsInput
+            return test(VisionSettingsInput(mode='custom', **endpoint))
+        provider = LLMProviderFactory.create_provider(ProviderType.OPENAI, endpoint['api_key'],
+                                                      body.model, base_url=endpoint['base_url'])
+        return {'success': provider.test_connection()}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception:
+        return {'success': False, 'error': '连接测试失败，请检查接口、密钥和模型'}
+
 
 class BasicSettings(BaseModel):
     """基础设置"""
     app_name: str = Field(default="AutoClip Desktop", description="应用名称")
-    app_version: str = Field(default="1.0.0", description="应用版本")
+    app_version: str = Field(default=__version__, description="应用版本")
     debug_mode: bool = Field(default=False, description="调试模式")
     auto_start: bool = Field(default=True, description="自动启动")
 
@@ -53,7 +119,14 @@ class ApiKeys(BaseModel):
     dashscope: str = Field(default="", description="通义千问API密钥")
     openai: str = Field(default="", description="OpenAI API密钥")
     gemini: str = Field(default="", description="Gemini API密钥")
-    siliconflow: str = Field(default="", description="SiliconFlow API密钥")
+    siliconflow: str = Field(default="", description="SiliconFlow API密钥（已不再作为独立提供商，仅兼容旧配置）")
+    deepseek: str = Field(default="", description="DeepSeek 官方 API密钥")
+    kimi: str = Field(default="", description="Kimi / 月之暗面 API密钥")
+    glm: str = Field(default="", description="智谱 GLM API密钥")
+    grok: str = Field(default="", description="xAI Grok API密钥")
+    infistar: str = Field(default="", description="Infistar 无限星河 API密钥")
+    api88: str = Field(default="", description="88API API密钥")
+    seed: str = Field(default="", description="火山方舟 Seed / 豆包 API密钥")
     jimeng_access: str = Field(default="", description="即梦AI访问密钥")
     jimeng_secret: str = Field(default="", description="即梦AI秘密密钥")
 
@@ -61,6 +134,8 @@ class ApiKeys(BaseModel):
 class ApiSettings(BaseModel):
     """API设置"""
     api_keys: ApiKeys = Field(default_factory=ApiKeys, description="API密钥")
+    api_provider: str = Field(default="dashscope", description="当前 LLM 提供商（dashscope / openai / gemini / deepseek / seed / kimi / glm / grok / infistar / api88，或本地预设 ollama / lmstudio）")
+    api_base_url: str = Field(default="", description="OpenAI 兼容接口地址；provider=openai 时空为官方地址，本地预设为空时用预设默认地址")
     api_model: str = Field(default="qwen-plus", description="默认模型")
     api_max_tokens: int = Field(default=4096, description="最大Token数")
     api_timeout: int = Field(default=30, description="API超时时间(秒)")
@@ -136,11 +211,52 @@ class DesktopSettings(BaseModel):
 def check_desktop_mode(relaxed: bool = False):
     """检查是否在Desktop模式
     relaxed=True 时放宽限制，允许内测安装包/开发环境调用（返回告警但不阻断）。
+
+    只有真正依赖桌面壳 / 本机文件系统的端点才需要它（数据目录迁移、备份恢复、导入导出、客户端配置同步）。
+    读写 settings.json、测试连接、查询当前提供商这类配置端点在 Docker / 本地脚本模式下同样有效：
+    settings.json 落在 `get_data_directory()`，API 进程与 Celery worker 都按 mtime 热重载。
+    以前这些端点也被拦成 400，Docker 用户只能改 .env（issue #100）。
     """
     if not is_desktop_mode():
         if relaxed:
             return False
         raise HTTPException(status_code=400, detail="此端点仅在Desktop模式下可用")
+
+
+class PrivacySettings(BaseModel):
+    crash_reports: bool = True
+
+
+@router.get("/privacy")
+async def get_privacy():
+    """崩溃报告等隐私开关（桌面数据目录 privacy.json）。"""
+    from backend.core.sentry_setup import crash_reports_enabled
+    return PrivacySettings(crash_reports=crash_reports_enabled())
+
+
+class AnalyticsIdentity(BaseModel):
+    distinct_id: str = Field(min_length=8, max_length=200)
+
+
+@router.put("/analytics-identity")
+async def put_analytics_identity(body: AnalyticsIdentity):
+    """Remember the UI's anonymous PostHog id. Backend QA events reuse it."""
+    from backend.services.studio.qa.telemetry import remember_distinct_id
+    if not remember_distinct_id(body.distinct_id):
+        raise HTTPException(status_code=422, detail="invalid distinct_id")
+    return {"ok": True}
+
+
+@router.put("/privacy")
+async def put_privacy(body: PrivacySettings):
+    from backend.core.sentry_setup import write_privacy, crash_reports_enabled, init_sentry
+    try:
+        write_privacy(crash_reports=body.crash_reports)
+        if body.crash_reports:
+            init_sentry(os.getenv("AUTOCLIP_MODE", "web"))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return PrivacySettings(crash_reports=crash_reports_enabled())
 
 
 @router.get("/desktop-mode")
@@ -156,33 +272,42 @@ async def check_desktop_mode_endpoint():
     }
 
 
+def _effective_llm_settings() -> Dict[str, Any]:
+    """LLM 管理器实际生效的 provider / model / base_url（settings.json 优先，其次环境变量）。
+    取不到时返回空 dict，调用方回退到默认值。"""
+    try:
+        from backend.core.llm_manager import get_llm_manager
+        return get_llm_manager().get_current_provider_info()
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"读取 LLM 管理器状态失败，设置页使用默认值: {e}")
+        return {}
+
+
 @router.get("/", response_model=DesktopSettings)
 async def get_settings():
     """获取所有设置"""
-    check_desktop_mode()
-    
     try:
         config = get_desktop_config()
         
         # 尝试从保存的设置文件中读取
         settings_file = config.paths.data_dir / "settings.json"
-        print(f"设置文件路径: {settings_file}")
-        print(f"设置文件存在: {settings_file.exists()}")
+        logger.debug(f"设置文件路径: {settings_file} (存在: {settings_file.exists()})")
         
         if settings_file.exists():
             try:
                 with open(settings_file, 'r', encoding='utf-8') as f:
                     saved_settings = json.load(f)
                 
-                print(f"从文件读取的设置: {saved_settings.get('basic', {}).get('app_name', 'unknown')}")
-                
                 # 验证并返回保存的设置
                 settings = DesktopSettings(**saved_settings)
                 return settings
             except Exception as e:
                 # 如果读取失败，回退到默认配置
-                print(f"读取设置文件失败: {e}")
-                pass
+                logger.warning(f"读取设置文件失败，回退到默认配置: {e}")
+
+        # 还没保存过 settings.json：Docker / 脚本模式的提供商、模型、base_url 来自环境变量
+        # （LLM_PROVIDER / API_MODEL_NAME / OPENAI_BASE_URL），设置页首屏应如实反映，而不是固定显示通义千问
+        effective = _effective_llm_settings()
         
         # 构建路径设置
         paths = PathSettings(
@@ -210,10 +335,19 @@ async def get_settings():
                     openai=config.openai_api_key,
                     gemini=config.gemini_api_key,
                     siliconflow=config.siliconflow_api_key,
+                    deepseek="",
+                    kimi="",
+                    glm="",
+                    grok="",
+                    infistar="",
+                    api88="",
+                    seed="",
                     jimeng_access="",  # 默认值
                     jimeng_secret=""   # 默认值
                 ),
-                api_model=config.default_model,
+                api_provider=effective.get("provider") or "dashscope",
+                api_base_url=effective.get("base_url") or "",
+                api_model=effective.get("model") or config.default_model,
                 api_max_tokens=config.max_tokens,
                 api_timeout=config.timeout
             ),
@@ -280,8 +414,6 @@ async def clear_settings(
     config: DesktopConfig = Depends(get_desktop_config)
 ):
     """清除所有设置"""
-    check_desktop_mode()
-    
     try:
         # 重置配置为默认值
         config.dashscope_api_key = ""
@@ -301,44 +433,61 @@ async def clear_settings(
 
 class TestApiRequest(BaseModel):
     provider: str
-    api_key: str
+    api_key: str = ""
+    base_url: Optional[str] = None   # 仅 openai：兼容接口地址
+    model: Optional[str] = None      # 用哪个模型发测试请求（兼容接口必须是服务端真有的模型名）
 
 @router.post("/test-api")
 async def test_api_connection(request: TestApiRequest):
     """测试API连接"""
-    check_desktop_mode()
-    
     try:
-        # 首先进行基本的API Key格式验证
-        if not request.api_key or len(request.api_key.strip()) < 10:
-            return {
-                "success": False,
-                "error": "API Key为空或过短，请检查输入",
-                "provider": request.provider
-            }
-        
-        # 根据提供商进行格式验证
-        if request.provider in ["dashscope", "openai"]:
-            if not request.api_key.startswith("sk-"):
+        from backend.core.llm_providers import normalize_base_url, OPENAI_OFFICIAL_BASE_URL
+        from backend.core.local_presets import resolve_provider
+        from backend.core.cloud_presets import resolve_cloud_preset
+        # ollama / lmstudio 预设 → openai + 默认地址
+        requested_provider = request.provider
+        cloud = resolve_cloud_preset(request.provider, request.base_url)
+        if cloud:
+            resolved_provider, resolved_base_url, _preset = cloud
+        else:
+            resolved_provider, resolved_base_url, _preset = resolve_provider(request.provider, request.base_url)
+        request.provider = resolved_provider
+        custom_base_url = normalize_base_url(resolved_base_url) if request.provider == "openai" else ""
+        if custom_base_url == OPENAI_OFFICIAL_BASE_URL:
+            custom_base_url = ""
+
+        # 官方服务才做 key 格式校验；自建 OpenAI 兼容服务（Ollama / vLLM 等）常常不需要 key
+        if not custom_base_url:
+            if not request.api_key or len(request.api_key.strip()) < 10:
+                return {
+                    "success": False,
+                    "error": "API Key为空或过短，请检查输入",
+                    "provider": request.provider
+                }
+            if request.provider in ["dashscope", "openai"] and not request.api_key.startswith("sk-"):
                 return {
                     "success": False,
                     "error": f"{request.provider} API Key格式可能不正确，通常以'sk-'开头",
                     "provider": request.provider
                 }
+
+        model_kwargs = {"model_name": request.model} if request.model else {}
         
         # 根据提供商测试API连接
         if request.provider == "dashscope":
             from backend.core.llm_providers import DashScopeProvider
-            provider_instance = DashScopeProvider(api_key=request.api_key)
+            # 国际站地址走兼容模式（#45）；空 = 中国站 native SDK
+            dashscope_base_url = normalize_base_url(request.base_url) or None
+            provider_instance = DashScopeProvider(api_key=request.api_key, base_url=dashscope_base_url, **model_kwargs)
         elif request.provider == "openai":
             from backend.core.llm_providers import OpenAIProvider
-            provider_instance = OpenAIProvider(api_key=request.api_key)
+            provider_instance = OpenAIProvider(api_key=request.api_key, base_url=custom_base_url or None, **model_kwargs)
         elif request.provider == "gemini":
             from backend.core.llm_providers import GeminiProvider
-            provider_instance = GeminiProvider(api_key=request.api_key)
+            provider_instance = GeminiProvider(api_key=request.api_key, **model_kwargs)
         elif request.provider == "siliconflow":
             from backend.core.llm_providers import SiliconFlowProvider
-            provider_instance = SiliconFlowProvider(api_key=request.api_key)
+            provider_instance = SiliconFlowProvider(api_key=request.api_key, **model_kwargs)
         else:
             raise HTTPException(status_code=400, detail="不支持的API提供商")
         
@@ -349,13 +498,15 @@ async def test_api_connection(request: TestApiRequest):
             return {
                 "success": True,
                 "message": "API连接测试成功",
-                "provider": request.provider
+                "provider": requested_provider
             }
         else:
             # 提供更详细的错误信息
             error_msg = f"API连接测试失败"
             if request.provider == "dashscope":
                 error_msg += "。请检查API Key是否正确，DashScope API Key通常以'sk-'开头"
+            elif request.provider == "openai" and custom_base_url:
+                error_msg += f"。请检查接口地址 {custom_base_url} 是否可达、模型名是否存在，以及该服务是否需要 API Key"
             elif request.provider == "openai":
                 error_msg += "。请检查API Key是否正确，OpenAI API Key通常以'sk-'开头"
             elif request.provider == "gemini":
@@ -380,8 +531,6 @@ async def test_api_connection(request: TestApiRequest):
 @router.put("/", response_model=Dict[str, Any])
 async def update_settings(settings: DesktopSettings):
     """更新设置"""
-    check_desktop_mode()
-    
     try:
         config = get_desktop_config()
         
@@ -413,6 +562,13 @@ async def update_settings(settings: DesktopSettings):
         settings_file = config.paths.data_dir / "settings.json"
         with open(settings_file, 'w', encoding='utf-8') as f:
             json.dump(settings.dict(), f, indent=2, ensure_ascii=False)
+
+        # 让本进程的 LLM 管理器立刻切到新 provider / base_url / 模型（worker 进程靠 mtime 自动重载）
+        try:
+            from backend.core.llm_manager import get_llm_manager
+            get_llm_manager()._reload_if_settings_changed()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"刷新 LLM 管理器失败（下次调用时会自动重载）: {e}")
         
         # 重要：保存主配置文件，确保API key等关键配置被持久化
         from backend.core.desktop_config import save_desktop_config
@@ -428,8 +584,6 @@ async def update_settings(settings: DesktopSettings):
 @router.post("/reset")
 async def reset_settings():
     """重置设置为默认值"""
-    check_desktop_mode()
-    
     try:
         config = get_desktop_config()
         
@@ -534,8 +688,6 @@ async def import_settings(file: UploadFile = File(...)):
 @router.get("/validation")
 async def validate_settings():
     """验证当前设置"""
-    check_desktop_mode()
-    
     try:
         config = get_desktop_config()
         validation_result = config.validate_config()
@@ -612,62 +764,117 @@ async def list_backups():
         raise HTTPException(status_code=500, detail=f"获取备份列表失败: {str(e)}")
 
 
+def _saved_provider_api_key(settings: DesktopSettings, provider: str) -> str:
+    keys = settings.api.api_keys
+    return {
+        "dashscope": keys.dashscope,
+        "openai": keys.openai,
+        "gemini": keys.gemini,
+        "siliconflow": keys.siliconflow,
+        "deepseek": keys.deepseek,
+        "kimi": keys.kimi,
+        "glm": keys.glm,
+        "grok": keys.grok,
+        "infistar": keys.infistar,
+        "api88": keys.api88,
+        "seed": keys.seed,
+    }.get((provider or "").strip().lower(), "") or ""
+
+
 @router.get("/available-models")
-async def get_available_models():
-    """获取可用的模型列表"""
-    check_desktop_mode()
-    
+async def get_available_models(
+    provider: str = "",
+    base_url: str = "",
+    api_key: str = "",
+    refresh: bool = False,
+):
+    """
+    云端提供商的模型下拉。
+
+    没密钥时返回内置常用名单；有密钥（请求参数或已保存的 settings）时
+    打服务商 `/models`，把账号此刻能用的型号合并进来。`refresh=1` 跳过缓存。
+    """
     try:
-        # 返回按供应商分类的模型列表
-        models = {
-            "dashscope": [
-                {"name": "qwen-plus", "display_name": "通义千问增强版", "max_tokens": 8192, "description": "适合复杂推理和创作任务"},
-                {"name": "qwen-turbo", "display_name": "通义千问标准版", "max_tokens": 8192, "description": "平衡性能和成本"},
-                {"name": "qwen-max", "display_name": "通义千问旗舰版", "max_tokens": 8192, "description": "最强性能，适合复杂任务"},
-                {"name": "qwen-long", "display_name": "通义千问长文本版", "max_tokens": 100000, "description": "支持超长文本处理"}
-            ],
-            "openai": [
-                {"name": "gpt-4o", "display_name": "GPT-4 Omni", "max_tokens": 128000, "description": "最新多模态模型"},
-                {"name": "gpt-4o-mini", "display_name": "GPT-4 Omni Mini", "max_tokens": 128000, "description": "轻量级多模态模型"},
-                {"name": "gpt-4-turbo", "display_name": "GPT-4 Turbo", "max_tokens": 128000, "description": "高性能版本"},
-                {"name": "gpt-4", "display_name": "GPT-4", "max_tokens": 8192, "description": "经典版本"},
-                {"name": "gpt-3.5-turbo", "display_name": "GPT-3.5 Turbo", "max_tokens": 16384, "description": "经济实用版本"}
-            ],
-            "gemini": [
-                {"name": "gemini-1.5-pro", "display_name": "Gemini 1.5 Pro", "max_tokens": 2000000, "description": "最新专业版"},
-                {"name": "gemini-1.5-flash", "display_name": "Gemini 1.5 Flash", "max_tokens": 1000000, "description": "快速响应版本"},
-                {"name": "gemini-pro", "display_name": "Gemini Pro", "max_tokens": 30720, "description": "经典专业版"}
-            ],
-            "siliconflow": [
-                {"name": "deepseek-chat", "display_name": "DeepSeek Chat", "max_tokens": 32768, "description": "深度求索对话模型"},
-                {"name": "deepseek-coder", "display_name": "DeepSeek Coder", "max_tokens": 16384, "description": "代码生成专用模型"},
-                {"name": "qwen-plus", "display_name": "通义千问增强版", "max_tokens": 8192, "description": "通过硅基流动访问"},
-                {"name": "qwen-turbo", "display_name": "通义千问标准版", "max_tokens": 8192, "description": "通过硅基流动访问"}
-            ],
+        from backend.core.model_catalog import list_available_models
+
+        key = (api_key or "").strip()
+        if not key and provider:
+            try:
+                settings = await get_settings()
+                key = _saved_provider_api_key(settings, provider).strip()
+            except Exception:  # noqa: BLE001
+                key = ""
+        result = await list_available_models(
+            provider=provider,
+            api_key=key,
+            base_url=base_url,
+            refresh=refresh,
+        )
+        # 旧调用方只认 {models: {provider: [{name, ...}]}}；新字段并排返回
+        legacy = {
+            name: [{"name": model, "display_name": model} for model in models]
+            for name, models in result.catalog.items()
         }
-        
-        return {"models": models}
-        
+        payload = result.as_dict()
+        payload["models_by_provider"] = legacy
+        return payload
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取模型列表失败: {str(e)}")
+
+
+@router.get("/local-presets")
+async def get_local_presets():
+    """本地模型预设（Ollama / LM Studio）：默认地址、默认模型、提示文案。"""
+    from backend.core.local_presets import presets_as_dicts
+    return {"presets": presets_as_dicts()}
+
+
+@router.get("/compatible-models")
+async def list_compatible_models(base_url: str = "", provider: str = "openai", api_key: str = ""):
+    """
+    列出一个 OpenAI 兼容服务（Ollama / LM Studio / vLLM…）实际提供的模型（GET {base_url}/models）。
+    设置页选本地预设时用它填模型下拉，免得用户手敲 `qwen2.5:7b` 这种名字。
+    """
+    from backend.core.local_presets import resolve_provider
+    from backend.core.llm_providers import normalize_base_url, is_local_url, OPENAI_COMPATIBLE_PLACEHOLDER_KEY
+    _provider, resolved_base_url, _preset = resolve_provider(provider, base_url)
+    url = normalize_base_url(resolved_base_url)
+    if not url:
+        raise HTTPException(status_code=400, detail="缺少 base_url")
+    try:
+        import httpx
+        headers = {"Authorization": f"Bearer {api_key or OPENAI_COMPATIBLE_PLACEHOLDER_KEY}"}
+        # 本地地址不走系统代理（否则 macOS 上开着 Clash 之类会 502）
+        async with httpx.AsyncClient(timeout=5.0, trust_env=not is_local_url(url)) as client:
+            resp = await client.get(f"{url}/models", headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+        items = data.get("data", data) if isinstance(data, dict) else data
+        models = sorted({str(m.get("id") or m.get("name")) for m in items if isinstance(m, dict) and (m.get("id") or m.get("name"))})
+        return {"reachable": True, "base_url": url, "models": models}
+    except Exception as e:  # noqa: BLE001
+        # 服务没起 / 地址不对：不算服务端错误，前端据此提示「服务未启动」
+        return {"reachable": False, "base_url": url, "models": [], "error": str(e)[:200]}
 
 
 @router.get("/current-provider")
 async def get_current_provider():
     """获取当前提供商信息"""
-    check_desktop_mode()
-    
     try:
-        config = get_desktop_config()
-        
-        # 根据当前配置返回提供商信息
+        # 以 LLM 管理器的实际状态为准（它读的就是设置页保存的 settings.json），
+        # 而不是固定返回 dashscope——那会让设置页每次打开都"跳回"通义千问。
+        from backend.core.llm_manager import get_llm_manager
+        info = get_llm_manager().get_current_provider_info()
+        display_name = info.get("display_name") or info.get("provider") or "阿里通义千问"
         provider_info = {
-            "provider": "dashscope",  # 默认提供商
-            "model": config.default_model or "qwen-plus",
-            "available": True,
-            "display_name": "通义千问",
-            "description": "阿里云通义千问服务"
+            "provider": info.get("provider") or "dashscope",
+            "model": info.get("model") or "qwen-plus",
+            "available": bool(info.get("available")),
+            "display_name": display_name,
+            "description": f"{display_name} 模型服务",
         }
+        if info.get("base_url"):
+            provider_info["base_url"] = info["base_url"]
         
         return provider_info
         

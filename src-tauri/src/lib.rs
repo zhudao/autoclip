@@ -4,17 +4,27 @@ use crate::tray::setup_system_tray;
 use tauri::Manager;
 
 mod backend_manager;
+#[cfg(windows)]
+mod windows_job;
 mod commands;
 mod tray;
+mod telemetry_runtime;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Use the same platform data-directory resolver as Tauri's path API.
+    let telemetry_dir = telemetry_runtime::app_dir(dirs::data_dir());
     tauri::Builder::default()
+        .plugin(tauri::plugin::Builder::<tauri::Wry>::new("telemetry-runtime")
+            .js_init_script(telemetry_runtime::webview_script(telemetry_dir.as_deref()))
+            .build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             start_backend_service,
             stop_backend_service,
@@ -24,7 +34,9 @@ pub fn run() {
             quit_app,
             enable_autostart,
             disable_autostart,
-            is_autostart_enabled
+            is_autostart_enabled,
+            crate::tray::set_tray_language,
+            save_local_download
         ])
         .manage(BackendManager::new())
         .setup(|app| {
@@ -50,6 +62,11 @@ pub fn run() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                let _ = app.state::<BackendManager>().stop();
+            }
+        });
 }

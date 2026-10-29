@@ -241,11 +241,9 @@ async def update_project_download_progress(project_id: str, progress: float, mes
             project = project_service.get(project_id)
             
             if project:
-                # 更新项目设置中的下载进度
-                if not project.processing_config:
-                    project.processing_config = {}
-                
-                project.processing_config.update({
+                # 必须换成新 dict。原地 update JSON 列不会落库，进度会停在创建时的 0%。
+                from ...services.download_progress import save_processing_config
+                save_processing_config(project, {
                     "download_progress": progress,
                     "download_message": message
                 })
@@ -295,6 +293,7 @@ async def process_download_task(task_id: str, request: BilibiliDownloadRequest, 
         
         video_path = download_result.get('video_path', '')
         subtitle_path = download_result.get('subtitle_path', '')
+        subtitle_error = None
         
         # 更新项目进度
         await update_project_download_progress(project_id, 60.0, "视频下载完成，正在处理字幕...")
@@ -311,7 +310,7 @@ async def process_download_task(task_id: str, request: BilibiliDownloadRequest, 
                 video_file_path = Path(video_path)
                 
                 # 根据视频信息选择合适的模型，但始终使用自动语言检测
-                model = "base"  # 默认使用平衡模型
+                model = None  # Use the configured local transcription model
                 language = "auto"  # 始终使用自动语言检测
                 
                 # 可以根据视频标题或描述判断内容类型，选择不同的模型大小
@@ -322,6 +321,8 @@ async def process_download_task(task_id: str, request: BilibiliDownloadRequest, 
                 
                 logger.info(f"使用Whisper生成字幕 - 语言: {language}, 模型: {model}")
                 
+                from backend.utils.speech_recognizer import configured_whisper_model
+                model = configured_whisper_model(model or 'base')
                 generated_subtitle = generate_subtitle_for_video(
                     video_file_path,
                     language=language,
@@ -334,13 +335,13 @@ async def process_download_task(task_id: str, request: BilibiliDownloadRequest, 
                 await update_project_download_progress(project_id, 90.0, "字幕生成完成，正在准备处理...")
                 
             except SpeechRecognitionError as e:
-                logger.error(f"Whisper字幕生成失败: {e}")
-                # Whisper失败时，标记项目为失败状态
-                logger.error("字幕文件不存在且Whisper生成失败，项目将标记为失败状态")
-                subtitle_path = None  # 确保字幕路径为空，后续会标记项目失败
+                logger.warning("Whisper字幕生成失败: %s", e)
+                subtitle_path = None
+                subtitle_error = str(e)
             except Exception as e:
-                logger.error(f"生成字幕过程中发生未知错误: {e}")
-                subtitle_path = None  # 确保字幕路径为空，后续会标记项目失败
+                logger.warning("生成字幕过程中发生未知错误: %s", type(e).__name__)
+                subtitle_path = None
+                subtitle_error = "本地 Whisper 生成字幕失败。请到「设置 → 转写」确认模型已下载，并检查视频有可播放的音轨。"
         
         download_tasks[task_id].progress = 80.0
         
@@ -348,6 +349,7 @@ async def process_download_task(task_id: str, request: BilibiliDownloadRequest, 
         from ...services.project_service import ProjectService
         from ...core.database import SessionLocal
         
+        saved_project_id = None
         db = SessionLocal()
         try:
             project_service = ProjectService(db)
@@ -361,11 +363,9 @@ async def process_download_task(task_id: str, request: BilibiliDownloadRequest, 
             project.description = f"从B站下载: {video_info.title}"
             # 注意：不要在这里设置video_path，等文件移动完成后再设置
             
-            # 更新项目设置
-            if not project.processing_config:
-                project.processing_config = {}
-            
-            project.processing_config.update({
+            # 更新项目设置。赋新 dict，避免 JSON 原地修改在提交时丢失。
+            from ...services.download_progress import save_processing_config
+            save_processing_config(project, {
                 "bilibili_info": {
                     "title": video_info.title,
                     "uploader": video_info.uploader,
@@ -408,9 +408,8 @@ async def process_download_task(task_id: str, request: BilibiliDownloadRequest, 
                     logger.info(f"字幕文件已移动到: {new_subtitle_path}")
                     
                     # 更新项目处理配置中的字幕路径
-                    if not project.processing_config:
-                        project.processing_config = {}
-                    project.processing_config["subtitle_path"] = str(new_subtitle_path)
+                    from ...services.download_progress import save_processing_config
+                    save_processing_config(project, {"subtitle_path": str(new_subtitle_path)})
             
             # 保存项目更新
             db.commit()
@@ -421,14 +420,16 @@ async def process_download_task(task_id: str, request: BilibiliDownloadRequest, 
                 logger.error(f"字幕文件不存在: {srt_file_path}，项目将标记为失败状态")
                 from ...schemas.project import ProjectStatus
                 project.status = ProjectStatus.FAILED
-                if not project.processing_config:
-                    project.processing_config = {}
-                project.processing_config["error_message"] = "字幕文件不存在且Whisper生成失败"
+                from ...services.download_progress import save_processing_config
+                save_processing_config(
+                    project,
+                    {"error_message": subtitle_error or "字幕文件不存在且Whisper生成失败"},
+                )
                 db.commit()
                 
                 # 更新任务状态为失败
                 download_tasks[task_id].status = "failed"
-                download_tasks[task_id].error_message = "字幕文件不存在且Whisper生成失败"
+                download_tasks[task_id].error_message = subtitle_error or "字幕文件不存在且Whisper生成失败"
                 download_tasks[task_id].progress = 0.0
                 download_tasks[task_id].project_id = str(project.id)
                 download_tasks[task_id].updated_at = datetime.now().isoformat()
@@ -449,45 +450,30 @@ async def process_download_task(task_id: str, request: BilibiliDownloadRequest, 
             download_tasks[task_id].updated_at = datetime.now().isoformat()
             
             logger.info(f"B站下载任务完成: {task_id}, 项目ID: {project.id}")
-            
-            # 自动启动处理流程
-            try:
-                # 更新项目状态为等待处理
-                from ...schemas.project import ProjectStatus
-                project.status = ProjectStatus.PENDING  # 改为PENDING，让自动化服务启动
-                db.commit()
-                
-                logger.info(f"B站项目 {project.id} 下载完成，等待自动化流水线启动")
-                
-                # 异步启动自动化流水线
-                import asyncio
-                from ...services.auto_pipeline_service import auto_pipeline_service
-                
-                # 使用create_task在已运行的事件循环中执行
-                try:
-                    loop = asyncio.get_running_loop()
-                    # 在已运行的事件循环中创建任务
-                    task = loop.create_task(
-                        auto_pipeline_service.auto_start_pipeline(str(project.id))
-                    )
-                    # 等待任务完成
-                    pipeline_result = await task
-                except RuntimeError:
-                    # 如果没有运行的事件循环，创建新的
-                    pipeline_result = await auto_pipeline_service.auto_start_pipeline(str(project.id))
-                
-                if pipeline_result['status'] == 'started':
-                    logger.info(f"B站项目 {project.id} 自动化流水线已启动: {pipeline_result}")
-                else:
-                    logger.warning(f"B站项目 {project.id} 自动化流水线启动结果: {pipeline_result}")
-                
-            except Exception as e:
-                logger.error(f"启动B站项目 {project.id} 自动化流水线失败: {str(e)}")
-                # 即使处理启动失败，也要返回下载成功
-                # 用户可以通过重试按钮重新启动处理
-            
+
+            # 先把项目改回等待处理。流水线在会话关闭之后再启动。
+            from ...schemas.project import ProjectStatus
+            project.status = ProjectStatus.PENDING
+            db.commit()
+
+            logger.info(f"B站项目 {project.id} 下载完成，等待自动化流水线启动")
+            saved_project_id = str(project.id)
         finally:
             db.close()
+
+        # 流水线可能同步跑完。先归还这条连接，再启动。
+        if saved_project_id:
+            try:
+                from ...services.auto_pipeline_service import auto_pipeline_service
+                pipeline_result = await auto_pipeline_service.auto_start_pipeline(saved_project_id)
+                if pipeline_result['status'] == 'started':
+                    logger.info(f"B站项目 {saved_project_id} 自动化流水线已启动: {pipeline_result}")
+                else:
+                    logger.warning(f"B站项目 {saved_project_id} 自动化流水线启动结果: {pipeline_result}")
+            except Exception as e:
+                logger.error(f"启动B站项目 {saved_project_id} 自动化流水线失败: {str(e)}")
+                # 即使处理启动失败，也要返回下载成功
+                # 用户可以通过重试按钮重新启动处理
             
     except Exception as e:
         logger.error(f"处理下载任务失败: {str(e)}")
@@ -507,9 +493,8 @@ async def process_download_task(task_id: str, request: BilibiliDownloadRequest, 
                 project = project_service.get(project_id)
                 if project and project.status == ProjectStatus.PENDING:
                     project.status = ProjectStatus.FAILED
-                    if not project.processing_config:
-                        project.processing_config = {}
-                    project.processing_config["error_message"] = f"下载失败: {e}"
+                    from ...services.download_progress import save_processing_config
+                    save_processing_config(project, {"error_message": f"下载失败: {e}"})
                     db.commit()
                     logger.info(f"项目 {project_id} 已标记为失败")
             finally:

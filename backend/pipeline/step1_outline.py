@@ -11,6 +11,11 @@ from pathlib import Path
 from ..utils.llm_client import LLMClient
 from ..utils.text_processor import TextProcessor
 from ..core.shared_config import PROMPT_FILES, METADATA_DIR
+from .failures import (
+    MODEL_CALL_MESSAGES,
+    PipelineFailure, HINT_CHECK_LLM, HINT_SUBTITLE, looks_like_llm_setup_error, llm_key_failure,
+    model_call_error_code,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,51 +58,110 @@ class OutlineExtractor:
         """
         logger.info("开始提取视频大纲...")
         
-        # 1. 解析SRT文件
+        # 1. 解析SRT文件。空字幕 / 解析失败必须让流水线失败，不能静默返回 [] 让后面跑成 0 切片
         try:
             srt_data = self.text_processor.parse_srt(srt_path)
-            if not srt_data:
-                logger.warning("SRT文件为空或解析失败")
-                return []
         except Exception as e:
             logger.error(f"解析SRT文件失败: {e}")
-            return []
+            raise PipelineFailure("SUBTITLE", f"字幕文件无法解析：{e}", HINT_SUBTITLE) from e
+        if not srt_data:
+            logger.warning("SRT文件为空或解析失败")
+            raise PipelineFailure("SUBTITLE", "字幕文件为空，没有可分析的文本。", HINT_SUBTITLE)
             
-        # 2. 基于时间智能分块
-        chunks = self.text_processor.chunk_srt_data(srt_data, interval_minutes=30)
-        logger.info(f"文本已按~30分钟/块切分，共{len(chunks)}个块")
+        # 1.5 时长画像：短视频不能套播客参数（#59）。写盘给 step2 / step3 复用
+        from .quality import profile_from_srt, save_profile
+        profile = profile_from_srt(srt_data)
+        save_profile(profile, self.metadata_dir)
+        outline_prompt = self.outline_prompt + profile.prompt_hint()
+        logger.info(f"时长画像: {profile.tier}，总时长 {profile.total_sec:.0f}s，建议话题数 {profile.topics_hint}")
+
+        # 2. 基于时间智能分块（短 / 中视频整条一块，长视频 ~30 分钟一块）
+        interval = 30 if profile.tier == "long" else max(1, int(profile.total_sec // 60) + 1)
+        chunks = self.text_processor.chunk_srt_data(srt_data, interval_minutes=interval)
+        from .settings import processing_int
+        chunks = self.text_processor.limit_srt_chunk_size(chunks, processing_int("chunk_size", 5000, 1000, 10000))
+        logger.info(f"文本已按~{interval}分钟/块切分，共{len(chunks)}个块")
         
         # 3. 保存文本块和SRT块到中间文件
         chunk_files = self._save_chunks_to_files(chunks)
         self._save_srt_chunks(chunks)
         
         all_outlines = []
+        failed_chunks = 0
+        last_error: Optional[BaseException] = None
         
-        # 4. 逐一处理每个文本块文件
-        for i, chunk_file in enumerate(chunk_files):
+        # 4. 每个文本块独立调用模型（并行，结果按块顺序）
+        def outline_chunk(item):
+            from backend.core.result_retry import MAX_ATTEMPTS, classify_for_retry
+
+            i, chunk_file = item
             logger.info(f"处理第{i+1}/{len(chunks)}个文本块: {chunk_file.name}")
+            last_error: Exception | None = None
             try:
-                # 读取文本块内容
                 with open(chunk_file, 'r', encoding='utf-8') as f:
                     chunk_text = f.read()
-                
-                # 为每个块调用LLM
-                input_data = {"text": chunk_text}
-                response = self.llm_client.call_with_retry(self.outline_prompt, input_data)
-                
-                if response:
-                    # 解析响应并附加块索引
-                    # 注意：这里的chunk_index直接用i，与文件名和原始chunk对应
-                    parsed_outlines = self._parse_outline_response(response, i)
-                    all_outlines.extend(parsed_outlines)
-                else:
-                    logger.warning(f"处理第{i+1}个文本块时返回空响应")
             except Exception as e:
                 logger.error(f"处理第{i+1}个文本块失败: {e}")
-                continue
+                return [], e
+            for attempt in range(MAX_ATTEMPTS):
+                try:
+                    response = self.llm_client.call_with_retry(outline_prompt, {"text": chunk_text})
+                except Exception as e:
+                    last_error = e
+                    _kind, retryable = classify_for_retry(e)
+                    logger.error(f"处理第{i+1}个文本块失败: {e}")
+                    if not retryable:
+                        return [], e
+                    if attempt >= MAX_ATTEMPTS - 1:
+                        return [], e
+                    continue
+                if not response:
+                    logger.warning(f"处理第{i+1}个文本块时返回空响应")
+                    if attempt >= MAX_ATTEMPTS - 1:
+                        return [], None
+                    continue
+                parsed = self._parse_outline_response(response, i)
+                if parsed:
+                    return parsed, None
+                if attempt >= MAX_ATTEMPTS - 1:
+                    return [], None
+            return [], last_error
+
+        from .concurrency import map_chunks
+        for parsed_outlines, error in map_chunks(outline_chunk, enumerate(chunk_files)):
+            # 单块失败可以继续（长视频某一块偶发超时不该毁掉整条），但要记账：
+            # 全部失败 = 提供商 / key / 模型不对，必须报错而不是交一个空大纲出去
+            if error is not None:
+                failed_chunks += 1
+                last_error = error
+            all_outlines.extend(parsed_outlines)
+
+        total_chunks = len(chunk_files)
+        if total_chunks and failed_chunks == total_chunks:
+            # The provider's raw text (often English, sometimes echoing a key prefix) goes to
+            # the log only; the user sees fixed, translatable wording (RC156 Win QA c5).
+            logger.warning("大纲提取失败：%s/%s 个文本块调用模型都失败了。最后一次错误：%s: %s",
+                           failed_chunks, total_chunks, type(last_error).__name__, last_error)
+            detail = f"大纲提取失败：{failed_chunks}/{total_chunks} 个文本块调用模型都失败了。"
+            if looks_like_llm_setup_error(str(last_error)):
+                raise llm_key_failure("ANALYZE", detail) from last_error
+            code = model_call_error_code(last_error)
+            fixed = MODEL_CALL_MESSAGES.get(code)
+            if fixed:
+                raise PipelineFailure("ANALYZE", fixed, "", code=code) from last_error
+            raise PipelineFailure("ANALYZE", detail, HINT_CHECK_LLM, code=code) from last_error
+        if failed_chunks:
+            logger.warning(f"{failed_chunks}/{total_chunks} 个文本块失败，用其余块继续。最后一次错误：{last_error}")
         
         # 5. 合并和去重
         final_outlines = self._merge_outlines(all_outlines)
+        if not final_outlines:
+            raise PipelineFailure(
+                "ANALYZE",
+                f"模型返回的内容无法解析为大纲（{total_chunks} 个文本块均未得到有效话题）。",
+                "换一个更强或更稳定的模型（如 qwen-plus / gpt-4o-mini）后重试；若用本地模型，确认它支持中文长文本。",
+                code="invalid_response",
+            )
         
         logger.info(f"大纲提取完成，共{len(final_outlines)}个话题")
         return final_outlines
@@ -127,6 +191,9 @@ class OutlineExtractor:
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(srt_entries, f, ensure_ascii=False, indent=2)
         
+        (self.srt_chunks_dir / "manifest.json").write_text(
+            json.dumps([f"chunk_{chunk['chunk_index']}.json" for chunk in chunks]), encoding="utf-8"
+        )
         logger.info(f"所有SRT块已保存到: {self.srt_chunks_dir}")
 
     def _parse_outline_response(self, response: str, chunk_index: int) -> List[Dict]:
@@ -140,6 +207,21 @@ class OutlineExtractor:
         Returns:
             解析后的大纲结构
         """
+        # 分类提示词同时存在 JSON 和 Markdown 契约，统一成下游结构。
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.strip(), flags=re.IGNORECASE)
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            data = None
+        if isinstance(data, list):
+            return [
+                {"title": item["title"].strip(),
+                 "subtopics": [s.strip() for s in item.get("subtopics", []) if isinstance(s, str) and s.strip()],
+                 "chunk_index": chunk_index}
+                for item in data
+                if isinstance(item, dict) and isinstance(item.get("title"), str)
+                and item["title"].strip() and isinstance(item.get("subtopics", []), list)
+            ]
         outlines = []
         lines = response.split('\n')
         current_outline = None

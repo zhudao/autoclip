@@ -1,891 +1,393 @@
-# AutoClip - AI Video Intelligent Clipping System
+<div align="center">
 
-![AutoClip Logo](https://img.shields.io/badge/AutoClip-AI%20Video%20Processing-blue?style=for-the-badge&logo=video)
+<img src="src-tauri/icons/128x128.png" alt="AutoClip" width="72" height="72">
 
-## AI-powered intelligent video clipping system
+# AutoClip
 
-Supporting YouTube/Bilibili video download, automatic clipping, and smart collection
-generation
+### One link. One click.
 
-[![Python](https://img.shields.io/badge/Python-3.8+-green?style=flat&logo=python)](https://python.org)
-[![React](https://img.shields.io/badge/React-18+-blue?style=flat&logo=react)](https://reactjs.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-Latest-red?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat&logo=typescript)](https://www.typescriptlang.org)
-[![Celery](https://img.shields.io/badge/Celery-Latest-green?style=flat&logo=celery)](https://celeryproject.org)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)](LICENSE)
+Open source, with cutting and rendering on your computer. Paste a link, pick a platform, and get <b>video, cover, and post copy</b>,<br>
+for Douyin, Xiaohongshu, TikTok, Reels, YouTube Shorts, Bilibili, or YouTube.<br>
+The app is free; cloud models charge by usage. Open the editor whenever you want to adjust.
 
-[![GitHub stars](https://img.shields.io/badge/Stars-0-blue?style=social)](https://github.com/zhouxiaoka/autoclip)
-[![GitHub forks](https://img.shields.io/badge/Forks-0-blue?style=social)](https://github.com/zhouxiaoka/autoclip)
-[![GitHub issues](https://img.shields.io/badge/Issues-0-blue)](https://github.com/zhouxiaoka/autoclip/issues)
+<p>
+  <a href="https://github.com/zhouxiaoka/autoclip/releases/latest"><img src="https://img.shields.io/github/v/release/zhouxiaoka/autoclip?style=flat-square" alt="GitHub release"></a>
+  <a href="https://github.com/zhouxiaoka/autoclip/stargazers"><img src="https://img.shields.io/github/stars/zhouxiaoka/autoclip?style=flat-square" alt="GitHub stars"></a>
+  <a href="https://github.com/zhouxiaoka/autoclip/releases"><img src="https://img.shields.io/github/downloads/zhouxiaoka/autoclip/total?style=flat-square" alt="Downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License: MIT"></a>
+</p>
 
-**Language**: [English](README-EN.md) | [中文](README.md)
+<a href="https://trendshift.io/repositories/25801"><img src="https://trendshift.io/api/badge/repositories/25801" alt="AutoClip — GitHub Trending" width="250" height="55"></a>
+
+**[Website](https://zhouxiaoka.github.io/autoclip_intro/)** · **[Download desktop](https://github.com/zhouxiaoka/autoclip/releases/latest)** · [Case library](https://zhouxiaoka.github.io/autoclip_intro/cases/) · [Research](docs/research/2026-10-what-drives-views/article-en.md) · [Quick start](#quick-start) · [Docs](#documentation) · [Report an issue](https://github.com/zhouxiaoka/autoclip/issues/new/choose)
+
+[简体中文](README.md) · **English** · [日本語](README-JA.md) · [한국어](README-KO.md) · [Español](README-ES.md) · [Português](README-PT.md) · [Русский](README-RU.md) · [Français](README-FR.md)
 
 </div>
 
-## 🎯 Project Overview
+**[The latest release](https://github.com/zhouxiaoka/autoclip/releases/latest)** is what `autoclip --version` reports, with desktop, CLI, and MCP updated together. See the [changelog](CHANGELOG.md) for quick output, caption pagination, speaker framing, and long-video queue fixes. Please upgrade older installations.
 
-AutoClip is an AI-powered intelligent video clipping system that can automatically
-download videos from YouTube, Bilibili, and other platforms, extract exciting clips
-through AI analysis, and intelligently generate collections. The system adopts a
-modern frontend-backend separation architecture, providing an intuitive web
-interface and powerful backend processing capabilities.
+## Real clips
 
-### ✨ Core Features
+Click a screenshot or “Play” to watch the full clip. Language labels refer to the output subtitles. Six picks are shown below; expand for ten more.
 
-- 🎬 **Multi-platform Support**: One-click download from YouTube, Bilibili, and local
-  file upload
-- 🤖 **AI Intelligent Analysis**: Video content understanding based on Qwen large
-  language model
-- ✂️ **Automatic Clipping**: Intelligent recognition of exciting clips with automatic
-  cutting, supporting multiple video categories
-- 📚 **Smart Collections**: AI-recommended and manually created video collections
-  with drag-and-drop sorting
-- 🚀 **Real-time Processing**: Asynchronous task queue with real-time progress feedback
-  and WebSocket communication
-- 🎨 **Modern Interface**: React + TypeScript + Ant Design with responsive design
-- 📱 **Mobile Support** **[In Development]**: Responsive design, improving mobile
-  experience
-- 🔐 **Account Management** **[In Development]**: Support for multiple Bilibili account
-  management with automatic health checks
-- 📊 **Data Statistics**: Complete project management and data statistics functionality
-- 🛠️ **Easy Deployment**: One-click startup scripts, Docker support, and detailed
-  documentation
-- 📤 **Bilibili Upload** **[In Development]**: Automatic upload of clipped videos
-  to Bilibili
-- ✏️ **Subtitle Editing** **[In Development]**: Visual subtitle editing and
-  synchronization functionality
+### Portrait · interview and full-screen podcast
 
-## 🏗️ System Architecture
+<table width="100%">
+<tr>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/gates-ezra/01.mp4?v=2026-10-01g"><img src="docs/images/demos/gates-ezra-01.jpg" width="180" alt="Bill Gates — AI测试时竟会装傻？"></a><br>
+<strong>Bill Gates</strong><br>
+Interview · Douyin · Chinese<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/gates-ezra/01.mp4?v=2026-10-01g">▶ Play 1:01</a> · <a href="https://www.youtube.com/watch?v=A_156w0aYtU">Source</a>
+</td>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/ai-labs-debate/01.mp4?v=2026-10-01g"><img src="docs/images/demos/ai-labs-debate-01.jpg" width="180" alt="AI Experts Debate — We&#x27;re Driving Toward a Cliff in the Fog"></a><br>
+<strong>AI Experts Debate</strong><br>
+Interview · Shorts · English<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/ai-labs-debate/01.mp4?v=2026-10-01g">▶ Play 1:25</a> · <a href="https://www.youtube.com/watch?v=OhOmLqR5nN4">Source</a>
+</td>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/robbins-36months/01.mp4?v=2026-10-01g"><img src="docs/images/demos/robbins-36months-01.jpg" width="180" alt="Tony Robbins — 风险极小，回报极大？"></a><br>
+<strong>Tony Robbins</strong><br>
+Full-screen podcast · Douyin · Chinese<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/robbins-36months/01.mp4?v=2026-10-01g">▶ Play 1:45</a> · <a href="https://www.youtube.com/watch?v=DuRcrbP3kag">Source</a>
+</td>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/garfield-poehler/01.mp4?v=2026-10-01g"><img src="docs/images/demos/garfield-poehler-01.jpg" width="180" alt="Andrew Garfield × Amy Poehler — I Love Competition—but Hate Fake Casualness"></a><br>
+<strong>Andrew Garfield × Amy Poehler</strong><br>
+Full-screen podcast · Shorts · English<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/garfield-poehler/01.mp4?v=2026-10-01g">▶ Play 1:01</a> · <a href="https://www.youtube.com/watch?v=OJV8AaWCxQQ">Source</a>
+</td>
+</tr>
+</table>
 
-```mermaid
-graph TB
-    A[User Interface] --> B[FastAPI Backend]
-    B --> C[Celery Task Queue]
-    B --> D[Redis Cache]
-    B --> E[SQLite Database]
-    C --> F[AI Processing Engine]
-    F --> G[Video Processing]
-    F --> H[Subtitle Analysis]
-    F --> I[Content Understanding]
-    B --> J[File Storage]
-    K[YouTube API] --> B
-    L[Bilibili API] --> B
-```
+### Landscape · original framing
 
-### Technology Stack
+<table width="100%">
+<tr>
+<td align="center" valign="top" width="50%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/luyu-tongliya/01.mp4?v=2026-10-01g"><img src="docs/images/demos/luyu-tongliya-01.jpg" width="360" alt="佟丽娅 × 鲁豫 — 舞蹈是我骨子里的东西"></a><br>
+<strong>佟丽娅 × 鲁豫</strong><br>
+Original framing · Bilibili · Chinese<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/luyu-tongliya/01.mp4?v=2026-10-01g">▶ Play 1:41</a> · <a href="https://www.bilibili.com/video/BV1qheu6kEFV/">Source</a>
+</td>
+<td align="center" valign="top" width="50%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/altman-uses-ai/01.mp4?v=2026-10-01g"><img src="docs/images/demos/altman-uses-ai-01.jpg" width="360" alt="Sam Altman — AI是文艺复兴，还是工业革命？"></a><br>
+<strong>Sam Altman</strong><br>
+Original framing · Bilibili · Chinese<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/altman-uses-ai/01.mp4?v=2026-10-01g">▶ Play 2:02</a> · <a href="https://www.youtube.com/watch?v=jZh55CQwSh8">Source</a>
+</td>
+</tr>
+</table>
 
-#### Backend Technologies
+<details>
+<summary>See 10 more real clips</summary>
 
-- **FastAPI**: Modern Python web framework with automatic API documentation generation
-- **Celery**: Distributed task queue supporting asynchronous processing
-- **Redis**: Message broker and cache for task status management
-- **SQLite**: Lightweight database with PostgreSQL upgrade support
-- **yt-dlp**: YouTube video download supporting multiple formats
-- **Qwen**: AI content analysis supporting multiple models
-- **WebSocket**: Real-time communication and progress push
-- **Pydantic**: Data validation and serialization
+<table width="100%">
+<tr>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/neumann-doac/01.mp4?v=2026-10-01g"><img src="docs/images/demos/neumann-doac-01.jpg" width="180" alt="Adam Neumann — Success is how you feel one minute before death—full of love, no regret"></a><br>
+<strong>Adam Neumann</strong><br>
+Full-screen podcast · TikTok · English<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/neumann-doac/01.mp4?v=2026-10-01g">▶ Play 0:59</a> · <a href="https://www.youtube.com/watch?v=IQ4JVWdj4Q0">Source</a>
+</td>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/luyu-xiaoqi/02.mp4?v=2026-10-01g"><img src="docs/images/demos/luyu-xiaoqi-02.jpg" width="180" alt="小奇 × 鲁豫 — 想证明自己，又怕被注视"></a><br>
+<strong>小奇 × 鲁豫</strong><br>
+Interview · Douyin · Chinese<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/luyu-xiaoqi/02.mp4?v=2026-10-01g">▶ Play 0:50</a> · <a href="https://www.bilibili.com/video/BV1ighy6AEPz/">Source</a>
+</td>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/luyu-guokeyu/01.mp4?v=2026-10-01g"><img src="docs/images/demos/luyu-guokeyu-01.jpg" width="180" alt="郭柯宇 × 鲁豫 — 演员的快感在创作过程 不在结果"></a><br>
+<strong>郭柯宇 × 鲁豫</strong><br>
+Interview · Douyin · Chinese<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/luyu-guokeyu/01.mp4?v=2026-10-01g">▶ Play 1:11</a> · <a href="https://www.bilibili.com/video/BV1LDYV6HEXR/">Source</a>
+</td>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/dafoe-hot-ones/01.mp4?v=2026-10-01g"><img src="docs/images/demos/dafoe-hot-ones-01.jpg" width="180" alt="Willem Dafoe — Fake teeth made him feel lascivious and instantly became the character"></a><br>
+<strong>Willem Dafoe</strong><br>
+Full-screen podcast · TikTok · English<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/dafoe-hot-ones/01.mp4?v=2026-10-01g">▶ Play 1:07</a> · <a href="https://www.youtube.com/watch?v=YqugY2zTIoI">Source</a>
+</td>
+</tr>
+<tr>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/tim-luoyonghao/01.mp4?v=2026-10-01g"><img src="docs/images/demos/tim-luoyonghao-01.jpg" width="180" alt="TIM × 罗永浩 — 红得快的网红 糊得更快"></a><br>
+<strong>TIM × 罗永浩</strong><br>
+Interview · Douyin · Chinese<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/tim-luoyonghao/01.mp4?v=2026-10-01g">▶ Play 1:05</a> · <a href="https://www.bilibili.com/video/BV1B5xkzPEhx/">Source</a>
+</td>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/jensen-dwarkesh/01.mp4?v=2026-10-01g"><img src="docs/images/demos/jensen-dwarkesh-01.jpg" width="180" alt="Jensen Huang — AI是五层蛋糕 能源才是底层"></a><br>
+<strong>Jensen Huang</strong><br>
+Interview · Xiaohongshu · Chinese<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/jensen-dwarkesh/01.mp4?v=2026-10-01g">▶ Play 1:17</a> · <a href="https://www.youtube.com/watch?v=Hrbq66XqtCo">Source</a>
+</td>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/karpathy-dwarkesh/01.mp4?v=2026-10-01g"><img src="docs/images/demos/karpathy-dwarkesh-01.jpg" width="180" alt="Andrej Karpathy — AI还不能当实习生用 因认知能力严重不足"></a><br>
+<strong>Andrej Karpathy</strong><br>
+Interview · Douyin · Chinese<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/karpathy-dwarkesh/01.mp4?v=2026-10-01g">▶ Play 0:43</a> · <a href="https://www.youtube.com/watch?v=lXUZvyajciY">Source</a>
+</td>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/apple-a20/01.mp4?v=2026-10-01g"><img src="docs/images/demos/apple-a20-01.jpg" width="180" alt="A20 Pro — 苹果芯片不是拼乐高"></a><br>
+<strong>A20 Pro</strong><br>
+Interview · Xiaohongshu · Chinese<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/apple-a20/01.mp4?v=2026-10-01g">▶ Play 2:00</a> · <a href="https://www.bilibili.com/video/BV1e4Y96FEaJ/">Source</a>
+</td>
+</tr>
+<tr>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/stallone-nyt/01.mp4?v=2026-10-01g"><img src="docs/images/demos/stallone-nyt-01.jpg" width="180" alt="Sylvester Stallone — 60岁写《洛奇》 是向衰老宣战"></a><br>
+<strong>Sylvester Stallone</strong><br>
+Interview · Douyin · Chinese<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/stallone-nyt/01.mp4?v=2026-10-01g">▶ Play 1:39</a> · <a href="https://www.youtube.com/watch?v=ccs-B_nTfZs">Source</a>
+</td>
+<td align="center" valign="top" width="25%">
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/mrbeast-colin-samir/01.mp4?v=2026-10-01g"><img src="docs/images/demos/mrbeast-colin-samir-01.jpg" width="180" alt="MrBeast — YouTube&#x27;s first 5 seconds matter more than thumbnails"></a><br>
+<strong>MrBeast</strong><br>
+Full-screen podcast · TikTok · English<br>
+<a href="https://pub-3fb92949b9c2480b89feec5ec03f3540.r2.dev/cases/mrbeast-colin-samir/01.mp4?v=2026-10-01g">▶ Play 1:42</a> · <a href="https://www.youtube.com/watch?v=9IQ_ldV9z_A">Source</a>
+</td>
+<td></td>
+<td></td>
+</tr>
+</table>
 
-#### Frontend Technologies
+</details>
 
-- **React 18**: User interface framework with Hooks and functional components
-- **TypeScript**: Type safety for better development experience
-- **Ant Design**: Enterprise-grade UI component library
-- **Vite**: Fast build tool with hot reload
-- **Zustand**: Lightweight state management
-- **React Router**: Route management
-- **Axios**: HTTP client
-- **React Player**: Video player
+Find videos, covers and post text in the **[case library →](https://zhouxiaoka.github.io/autoclip_intro/cases/?lang=en)**, and [share your clips](https://github.com/zhouxiaoka/autoclip/discussions/new?category=show-and-tell). Source videos belong to their creators; these clips are shown for demonstration only.
 
-## 🚀 Quick Start
+## What it does
 
-### Environment Requirements
+### Paste a link, get clips
 
-#### Docker Deployment (Recommended)
+Pick a platform to generate within its frame and duration rules. Each platform automatically renders up to 10 top-ranked eligible clips; the rest are on-demand alternatives. Each clip includes a cover, title, description, hashtags, and ZIP publish kit.
 
-- **Docker**: 20.10+
-- **Docker Compose**: 2.0+
-- **Memory**: Minimum 4GB, recommended 8GB+
-- **Storage**: Minimum 10GB available space
+### Packaging is built in
 
-#### Local Deployment
+Douyin / Xiaohongshu default to interview style; TikTok / Reels / Shorts default to full-screen podcast style. You can choose either vertical layout without changing the platform’s caption/copy language. Bilibili / YouTube use landscape. Framing follows the speaker and preserves full frames when no person is found. The brand outro is on by default and can be disabled in Settings; copied post text has no AutoClip credit.
 
-- **Operating System**: macOS / Linux / Windows (WSL)
-- **Python**: 3.8+ (recommended 3.9+)
-- **Node.js**: 16+ (recommended 18+)
-- **Redis**: 6.0+ (recommended 7.0+)
-- **FFmpeg**: Video processing dependency
-- **Memory**: Minimum 4GB, recommended 8GB+
-- **Storage**: Minimum 10GB available space
+### It stays on your computer
 
-### One-Click Startup
+Cutting, framing, and rendering run locally. Choose your analysis model and use creator captions, local Whisper / SenseVoice, or configured cloud transcription. CLI / MCP share the desktop quick-output pipeline.
 
-#### Method 1: Docker Deployment (Recommended)
+## Time and cost on real sources
+
+These are measurements from three different sources during development, not a controlled comparison of the same input. Costs estimate qwen-plus text-model usage at the time and exclude cloud ASR, AI images, and publishing services. Your provider’s bill is authoritative.
+
+| Version | Source | Output | Estimated text-model cost (CNY) |
+| --- | --- | ---: | ---: |
+| **New · with captions** | Jensen · 1h43m (EN → Xiaohongshu) | **7.5 min / 10 clips** | **¥0.09** |
+| New · no captions | TIM × Luo Yonghao · 2h52m (ZH → Douyin) | 29.5 min / 10 clips | ¥0.20 |
+| Previous | MrBeast · 2h06m (EN → TikTok) | 65 min | ¥0.64 |
+
+<details>
+<summary>Conditions and records</summary>
+
+1 October 2026, the same Apple Silicon Mac. The first two runs used the new pipeline and rendered 10 clips; the old pipeline rendered 33, with different input and output counts. Jensen used creator captions; TIM used local Whisper base.
+
+Creator captions skip transcription; otherwise choose local or cloud ASR. Additional platforms and on-demand clips add time and usage. See [measurements and costing](docs/COST_PER_VIDEO.md) (Chinese) for stage records and assumptions.
+
+</details>
+
+## Choose your models and data flow
+
+Cutting and rendering run on your computer. Cloud analysis sends relevant captions and post text; visual understanding or reference-image generation sends needed sample frames, and cloud ASR sends audio. Local analysis and transcription need no corresponding cloud API. Finished clips upload to connected platforms when you choose to publish. Analytics and error reports can be disabled in Settings. See [privacy](docs/PRIVACY.en.md).
+
+<a id="quick-start"></a>
+
+## Quick start
+
+| You want to | Use | You need |
+| --- | --- | --- |
+| Make clips on this computer | **Desktop** | macOS Apple Silicon or Windows x64 |
+| Self-host / Linux | **Docker** | Docker and Compose v2 |
+| Batch / agents | **CLI / MCP** | Python 3.10+ (3.11 recommended) and FFmpeg |
+
+### Desktop
+
+1. **Install.** Download from [Releases](https://github.com/zhouxiaoka/autoclip/releases/latest). macOS Apple Silicon: `.dmg`. Windows 10 / 11 x64: `-setup.exe`. Python and FFmpeg are bundled.
+2. **Configure a model.** Choose a provider and enter its API key, select an available analysis model, test the connection, and save. For local models, start Ollama / LM Studio and load a model first.
+3. **Paste a link, pick a platform.** Start with a captioned interview or podcast and choose a vertical layout. Without captions, prepare Whisper / SenseVoice in Settings or configure cloud transcription.
+4. **Review and download.** Check captions, framing, and content completeness, then save the publish kit or connect an account to publish. Generate on-demand alternatives when you need more clips.
+
+Intel Macs / Linux can use Docker or CLI. See the [installation guide](docs/USER_INSTALLATION_GUIDE.en.md) and [latest Release](https://github.com/zhouxiaoka/autoclip/releases/latest) for requirements, first-launch guidance, and acceptance scope.
+
+[Full installation guide](docs/USER_INSTALLATION_GUIDE.en.md) · [Troubleshooting](docs/FAQ.en.md)
+
+**Docker / Web**
 
 ```bash
-# Clone the project
 git clone https://github.com/zhouxiaoka/autoclip.git
 cd autoclip
-
-# Docker one-click startup
-./docker-start.sh
-
-# Development environment startup
-./docker-start.sh dev
-
-# Stop services
-./docker-stop.sh
-
-# Check service status
-./docker-status.sh
+cp env.example .env
+mkdir -p data logs uploads
+docker compose up -d --build
 ```
 
-#### Method 2: Local Deployment
+Open the [web UI](http://localhost:3000). [API docs](http://localhost:8000/docs) are available after the backend starts. See the [Docker guide](docs/DOCKER.en.md).
+
+On Linux, if bind mounts fail on permissions, fix ownership first:
 
 ```bash
-# Clone the project
-git clone https://github.com/zhouxiaoka/autoclip.git
-cd autoclip
-
-# One-click startup (recommended, includes complete checks and monitoring)
-./start_autoclip.sh
-
-# Quick startup (development environment, skips detailed checks)
-./quick_start.sh
-
-# Check system status
-./status_autoclip.sh
-
-# Stop system
-./stop_autoclip.sh
+docker compose run --rm --no-deps --user root --entrypoint sh autoclip -c 'chown -R autoclip:autoclip /app/data /app/logs /app/uploads'
+docker compose up -d
 ```
 
-### Manual Installation
+For a LAN IP or custom domain, add the frontend address to `AUTOCLIP_ALLOWED_ORIGINS` in `.env` (comma-separated).
+
+**CLI / MCP**
+
+Requires Python 3.10+ (3.11 recommended), with FFmpeg and FFprobe on PATH; local CLI needs no Redis. Download the [official CLI / MCP ZIP](https://github.com/zhouxiaoka/autoclip/releases/latest), extract it, and run in that directory:
 
 ```bash
-# 1. Create virtual environment
 python3 -m venv venv
-source venv/bin/activate  # Linux/macOS
-# or venv\Scripts\activate  # Windows
-
-# 2. Install Python dependencies
-pip install -r requirements.txt
-
-# 3. Install frontend dependencies
-cd frontend && npm install && cd ..
-
-# 4. Install Redis
-# macOS
-brew install redis
-brew services start redis
-
-# Ubuntu/Debian
-sudo apt update
-sudo apt install redis-server
-sudo systemctl start redis-server
-
-# CentOS/RHEL
-sudo yum install redis
-sudo systemctl start redis
-
-# 5. Install FFmpeg
-# macOS
-brew install ffmpeg
-
-# Ubuntu/Debian
-sudo apt install ffmpeg
-
-# CentOS/RHEL
-sudo yum install ffmpeg
-
-# 6. Configure environment variables
-cp env.example .env
-# Edit .env file and fill in necessary configurations
-```
-
-## 🎬 Feature Demo
-
-### Main Feature Showcase
-
-1. **Video Download and Processing**
-   - Support for YouTube, Bilibili video link parsing
-   - Automatic video and subtitle file download
-   - Support for local file upload
-
-2. **AI Intelligent Analysis**
-   - Automatic video outline extraction
-   - Intelligent topic timeline identification
-   - Exciting clip scoring
-
-3. **Video Clipping and Collections**
-   - Automatic exciting clip generation
-   - Smart collection recommendations
-   - Support for manual editing and sorting
-
-4. **Real-time Progress Monitoring**
-   - WebSocket real-time progress push
-   - Detailed task status display
-   - Error handling and retry mechanisms
-
-5. **Bilibili Upload Feature** **[In Development]**
-   - Automatic upload of clipped videos to Bilibili
-   - Support for multiple account management
-   - Batch upload and queue management
-
-6. **Subtitle Editing Feature** **[In Development]**
-   - Visual subtitle editor
-   - Subtitle synchronization and adjustment
-   - Multi-language subtitle support
-
-## 📖 User Guide
-
-### 1. Video Download
-
-#### YouTube Videos
-
-1. Click "New Project" on the homepage
-2. Select "YouTube Link"
-3. Paste the video URL
-4. Choose browser cookies (optional)
-5. Click "Start Download"
-
-#### Bilibili Videos
-
-1. Click "New Project" on the homepage
-2. Select "Bilibili Link"
-3. Paste the video URL
-4. Choose login account
-5. Click "Start Download"
-
-#### Local Files
-
-1. Click "New Project" on the homepage
-2. Select "File Upload"
-3. Drag and drop or select video files
-4. Upload subtitle files (optional)
-5. Click "Start Processing"
-
-### 2. Intelligent Processing
-
-The system will automatically execute the following steps:
-
-1. **Material Preparation**: Download video and subtitle files
-2. **Content Analysis**: AI extracts video outline and key information
-3. **Timeline Extraction**: Identify topic time intervals
-4. **Exciting Scoring**: AI scoring for each clip
-5. **Title Generation**: Generate attractive titles for exciting clips
-6. **Collection Recommendation**: AI-recommended video collections
-7. **Video Generation**: Generate clipped videos and collection videos
-
-### 3. Result Management
-
-- **View Clips**: View all generated video clips on the project detail page
-- **Edit Information**: Modify clip titles, descriptions, etc.
-- **Create Collections**: Manually create or use AI-recommended collections
-- **Download Export**: Download individual clips or complete collections
-- **Bilibili Upload** **[In Development]**: One-click upload of clipped videos to
-  Bilibili
-- **Subtitle Editing** **[In Development]**: Visual editing and synchronization of
-  subtitle files
-
-## 🔧 Configuration
-
-### Environment Variable Configuration
-
-Create `.env` file:
-
-```bash
-# Database configuration
-DATABASE_URL=sqlite:///./data/autoclip.db
-
-# Redis configuration
-REDIS_URL=redis://localhost:6379/0
-
-# AI API configuration
-API_DASHSCOPE_API_KEY=your_dashscope_api_key
-API_MODEL_NAME=qwen-plus
-
-# Logging configuration
-LOG_LEVEL=INFO
-ENVIRONMENT=development
-DEBUG=true
-
-# File storage
-UPLOAD_DIR=./data/uploads
-PROJECT_DIR=./data/projects
-```
-
-### Bilibili Account Configuration **[In Development]**
-
-1. Click "Bilibili Account Management" on the settings page
-2. Choose login method:
-   - **Cookie Import** (recommended): Export cookies from browser
-   - **Account Password**: Directly input account and password
-   - **QR Code Login**: Scan QR code to login
-3. After successful addition, the system will automatically manage account health
-  status
-
-## 📁 Project Structure
-
-```text
-autoclip/
-├── backend/                 # Backend code
-│   ├── api/                # API routes
-│   │   ├── v1/            # API v1 version
-│   │   │   ├── youtube.py # YouTube download API
-│   │   │   ├── bilibili.py # Bilibili download API
-│   │   │   ├── projects.py # Project management API
-│   │   │   ├── clips.py   # Video clip API
-│   │   │   ├── collections.py # Collection management API
-│   │   │   └── settings.py # System settings API
-│   │   └── upload_queue.py # Upload queue management
-│   ├── core/              # Core configuration
-│   │   ├── database.py    # Database configuration
-│   │   ├── celery_app.py  # Celery configuration
-│   │   ├── config.py      # System configuration
-│   │   └── llm_manager.py # AI model management
-│   ├── models/            # Data models
-│   │   ├── project.py     # Project model
-│   │   ├── clip.py        # Clip model
-│   │   ├── collection.py  # Collection model
-│   │   └── bilibili.py    # Bilibili account model
-│   ├── services/          # Business logic
-│   │   ├── video_service.py # Video processing service
-│   │   ├── ai_service.py  # AI analysis service
-│   │   └── upload_service.py # Upload service
-│   ├── tasks/             # Celery tasks
-│   │   ├── processing.py  # Processing tasks
-│   │   ├── upload.py      # Upload tasks
-│   │   └── maintenance.py # Maintenance tasks
-│   ├── pipeline/          # Processing pipeline
-│   │   ├── step1_outline.py # Outline extraction
-│   │   ├── step2_timeline.py # Timeline analysis
-│   │   ├── step3_scoring.py # Exciting scoring
-│   │   └── step6_video.py # Video generation
-│   └── utils/             # Utility functions
-├── frontend/              # Frontend code
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   │   ├── UploadModal.tsx # Upload modal
-│   │   │   ├── ClipCard.tsx # Clip card
-│   │   │   ├── CollectionCard.tsx # Collection card
-│   │   │   └── BilibiliManager.tsx # Bilibili management
-│   │   ├── pages/         # Page components
-│   │   │   ├── HomePage.tsx # Home page
-│   │   │   ├── ProjectDetailPage.tsx # Project detail
-│   │   │   └── SettingsPage.tsx # Settings page
-│   │   ├── services/      # API services
-│   │   │   └── api.ts     # API client
-│   │   └── stores/        # State management
-│   └── package.json
-├── data/                  # Data storage
-│   ├── projects/          # Project data
-│   ├── uploads/           # Upload files
-│   ├── temp/              # Temporary files
-│   ├── output/            # Output files
-│   └── autoclip.db        # Database file
-├── scripts/               # Utility scripts
-│   ├── start_autoclip.sh  # Startup script
-│   ├── stop_autoclip.sh   # Stop script
-│   └── status_autoclip.sh # Status check
-├── docs/                  # Documentation
-├── logs/                  # Log files
-├── Dockerfile             # Docker image build file
-├── Dockerfile.dev         # Development environment Docker file
-├── docker-compose.yml     # Production environment Docker orchestration
-├── docker-compose.dev.yml # Development environment Docker orchestration
-├── docker-start.sh        # Docker startup script
-├── docker-stop.sh         # Docker stop script
-├── docker-status.sh       # Docker status check script
-├── .dockerignore          # Docker ignore file
-├── DOCKER.md              # Docker deployment documentation
-└── *.sh                   # Startup scripts
-```
-
-## 🌐 API Documentation
-
-After starting the system, visit the following addresses to view API documentation:
-
-- **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-
-### Main API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/projects` | GET | Get project list |
-| `/api/v1/projects` | POST | Create new project |
-| `/api/v1/projects/{id}` | GET | Get project details |
-| `/api/v1/youtube/parse` | POST | Parse YouTube video information |
-| `/api/v1/youtube/download` | POST | Download YouTube video |
-| `/api/v1/bilibili/download` | POST | Download Bilibili video |
-| `/api/v1/projects/{id}/process` | POST | Start project processing |
-| `/api/v1/projects/{id}/status` | GET | Get processing status |
-
-## 🔍 Troubleshooting
-
-### Common Issues
-
-#### 1. Port Occupied
-
-```bash
-# Check port usage
-lsof -i :8000  # Backend port
-lsof -i :3000  # Frontend port
-
-# Stop occupying processes
-kill -9 <PID>
-```
-
-#### 2. Redis Connection Failed
-
-```bash
-# Check Redis status
-redis-cli ping
-
-# Start Redis service
-brew services start redis  # macOS
-systemctl start redis-server  # Linux
-```
-
-#### 3. YouTube Download Failed
-
-- Check network connection
-- Update yt-dlp: `pip install --upgrade yt-dlp`
-- Try using browser cookies
-- Check if video is available
-
-#### 4. Bilibili Download Failed
-
-- Check account login status
-- Update account cookies
-- Check video permission settings
-
-### Log Viewing
-
-```bash
-# View all logs
-tail -f logs/*.log
-
-# View specific service logs
-tail -f logs/backend.log    # Backend logs
-tail -f logs/frontend.log   # Frontend logs
-tail -f logs/celery.log     # Task queue logs
-```
-
-### System Status Check
-
-```bash
-# Detailed status check
-./status_autoclip.sh
-
-# Manual service check
-curl http://localhost:8000/api/v1/health/  # Backend health check
-curl http://localhost:3000/                # Frontend access test
-redis-cli ping                             # Redis connection test
-```
-
-## 🛠️ Development Guide
-
-### Backend Development
-
-```bash
-# Activate virtual environment
 source venv/bin/activate
-
-# Set Python path
-export PYTHONPATH="${PWD}:${PYTHONPATH}"
-
-# Start backend development server
-python -m uvicorn backend.main:app --reload --port 8000
+python -m pip install -r requirements.txt
+python -m pip install --force-reinstall --no-deps autoclip_mcp-*-py3-none-any.whl
 ```
 
-### Frontend Development
+Without the ZIP, install with one command. Installing from a cloned source checkout remains available:
 
 ```bash
-# Enter frontend directory
-cd frontend
-
-# Start development server
-npm run dev
+# 一行安装
+uvx autoclip-mcp
+npx skills add zhouxiaoka/autoclip
 ```
-
-### Celery Worker
 
 ```bash
-# Start Worker
-celery -A backend.core.celery_app worker --loglevel=info
-
-# Start Beat scheduler
-celery -A backend.core.celery_app beat --loglevel=info
-
-# Start Flower monitoring
-celery -A backend.core.celery_app flower --port=5555
+# 备选：在已克隆的仓库根目录从源码安装
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m pip install --no-deps .
+autoclip --version
 ```
 
-## 📊 Performance Optimization
+Commands above are for macOS / Linux. On Windows, create with `py -m venv venv` and activate with `.\venv\Scripts\Activate.ps1`, then use the same `python -m pip` installation commands.
 
-### Production Environment Configuration
-
-1. **Database Optimization**
-   - Use PostgreSQL instead of SQLite
-   - Configure connection pooling
-   - Enable query caching
-
-2. **Redis Optimization**
-   - Configure memory limits
-   - Enable persistence
-   - Set expiration policies
-
-3. **Celery Optimization**
-   - Adjust concurrency
-   - Configure task routing
-   - Enable result backend
-
-## 🔒 Security Configuration
-
-### Production Environment Security
-
-1. **Environment Variables**
-   - Use strong passwords
-   - Regularly rotate keys
-   - Limit API access
-
-2. **Network Security**
-   - Configure firewall
-   - Use HTTPS
-   - Limit CORS
-
-3. **Data Security**
-   - Regular backups
-   - Encrypt sensitive data
-   - Access control
-
-## 🚀 Deployment Guide
-
-### Docker Deployment
-
-#### Quick Start
+Save model settings first: reuse desktop settings, or configure your own data directory from the ZIP’s key-free example. See the [CLI / MCP guide](docs/CLI_AND_MCP.md) (Chinese). `produce` does not use the old `run --provider` override. Supply `--srt` to skip transcription.
 
 ```bash
-# Clone the project
-git clone https://github.com/zhouxiaoka/autoclip.git
-cd autoclip
-
-# Configure environment variables
-cp env.example .env
-# Edit .env file and fill in necessary configurations
-
-# Start all services
-docker-compose up -d
-
-# Check service status
-docker-compose ps
+autoclip --version
+autoclip produce talk.mp4 --srt talk.srt --platform douyin --portrait-style podcast --json
+autoclip outputs PROJECT_ID --export-kits
 ```
 
-#### Access Services
+The MCP client starts the server. For standalone debugging, run `autoclip mcp` in a separate terminal; OpenCode users can write client configuration with `autoclip mcp install opencode`.
+
+Replace `PROJECT_ID` with the project ID returned by production. MCP uses `start_quick_output` / `get_quick_output_status`; set the client’s `command` to the virtualenv’s absolute `autoclip` path and `args` to `["mcp"]`. Legacy `run` / `export` and clipping tools remain available. See [CLI / MCP](docs/CLI_AND_MCP.md) (Chinese), [OpenCode](docs/OPENCODE.en.md), and [Agent skill](skills/autoclip/SKILL.md) (Chinese).
 
-- **Frontend Interface**: [http://localhost:3000](http://localhost:3000)
-- **Backend API**: [http://localhost:8000](http://localhost:8000)
-- **API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Flower Monitoring**: [http://localhost:5555](http://localhost:5555)
+Smithery’s local stdio listing uses an MCPB bundle. From the repo root, run `python scripts/pack_mcpb.py`. The artifact is `dist/autoclip-mcp.mcpb` and is not committed. Publish with `smithery mcp publish ./dist/autoclip-mcp.mcpb -n io.github.zhouxiaoka/autoclip-mcp` using the maintainer’s own login. The repository does not store an API key. Steps are in [CLI / MCP](docs/CLI_AND_MCP.md) (Chinese).
 
-#### Development Environment
+## Model setup
 
-```bash
-# Use development environment configuration
-docker-compose -f docker-compose.dev.yml up -d
+| Option | Setup |
+| --- | --- |
+| Cloud API | Pick a provider in Settings and enter your API key. OpenAI-compatible services also accept a Base URL. |
+| Ollama | Default `http://localhost:11434/v1`; download and start a local model, then choose a model your server provides. No API key. |
+| LM Studio | Load a model and start Local Server, default `http://localhost:1234/v1`. |
 
-# View logs in real-time
-docker-compose -f docker-compose.dev.yml logs -f
-```
+Inside Docker, `localhost` is the container. Point at a host address the container can reach.
 
-#### Detailed Instructions
+[Model setup](docs/MULTI_LLM_PROVIDER_GUIDE.md) (Chinese) · [Local models and containers](docs/CLI_AND_MCP.md) (Chinese)
 
-Complete Docker deployment guide please refer to [DOCKER.md](DOCKER.md) documentation.
+## Special thanks ❤️
 
-### System Service
+<table>
+  <tr>
+    <td align="center" width="140">
+      <a href="https://88api.ai/sign-up?aff=2PIc"><img src="docs/sponsors/88api-logo.jpg" alt="88API" width="88"></a><br>
+      <a href="https://88api.ai/sign-up?aff=2PIc"><strong>88API</strong></a>
+    </td>
+    <td>
+      Thank you to <strong>88API Token Platform</strong> for sponsoring AutoClip! It brings together GPT, Claude, Gemini, Grok, DeepSeek, Kimi and GLM for transcript analysis, highlight selection and title generation.<br>
+      🎨 <strong>Media capabilities</strong>: The platform offers image, video and audio models, including GPT-Image, Seedance, Veo, MiniMax Hailuo H3, Kling, Whisper and TTS. AutoClip uses compatible analysis, cover-image and transcription APIs.<br>
+      🏷️ <strong>Service and billing</strong>: The partner reports overseas corporate operation, live support, invoices and a 1:1 top-up ratio; platform terms apply.<br>
+      🎁 <strong>New-user offer</strong>: Receive trial credit to test models through our <a href="https://88api.ai/sign-up?aff=2PIc">referral registration link</a>, subject to promotion terms. <a href="docs/88API_SETUP.en.md">Setup guide</a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="140">
+      <a href="https://www.infistar.cc/register?aff=XLK3BCM6&amp;ref_source=link"><img src="docs/sponsors/infistar-logo.svg" alt="Infistar" width="88"></a><br>
+      <a href="https://www.infistar.cc/register?aff=XLK3BCM6&amp;ref_source=link"><strong>Infistar.cc</strong></a>
+    </td>
+    <td>
+      Thank you to <strong>Infistar.cc</strong> for sponsoring AutoClip! Its multi-model API service can support long-video transcript analysis, highlight selection, and title generation.<br>
+      ⚙️ <strong>Compatible setup</strong>: Choose the OpenAI-compatible provider in AutoClip and enter the Base URL, your API key, and an available model.<br>
+      🧩 <strong>Model choice</strong>: The partner offers Claude, GPT, Gemini, DeepSeek, and other model families. Choose models that support the compatible endpoint to compare transcript analysis and highlight selection.<br>
+      🏷️ <strong>Pricing and services</strong>: According to the partner, selected models cost as little as <strong>1% of official list prices</strong>, with RMB billing, invoices, and model authenticity verification. Check the platform for eligible models, current prices, and service terms.<br>
+      🎁 <strong>AutoClip offer</strong>: New users can receive <strong>$5 in trial credit</strong> through our <a href="https://www.infistar.cc/register?aff=XLK3BCM6&amp;ref_source=link">referral registration link</a>, subject to the promotion terms. <a href="docs/INFISTAR_SETUP.en.md">Setup guide</a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="140">
+      <a href="https://go.apimart.ai/tw-autoclip"><img src="docs/sponsors/apimart.png" alt="APIMart" width="88"></a><br>
+      <a href="https://go.apimart.ai/tw-autoclip"><strong>APIMart</strong></a>
+    </td>
+    <td>
+      Thanks to <strong>APIMart</strong> for sponsoring this project! <strong>APIMart</strong> is a low-cost API platform for AI image &amp; video generation — GPT-Image-2 from <strong>$0.006/image</strong>, <strong>160+</strong> images per dollar. One async API covers both image and video: submit a task, get an ID, fetch results via polling or callback. Batch tens of thousands of images without timeouts, switch models without changing code. Pay-as-you-go with no monthly fee — <a href="https://go.apimart.ai/tw-autoclip">sign up here</a> to get started.
+    </td>
+  </tr>
+</table>
 
-```bash
-# Create systemd service file
-sudo nano /etc/systemd/system/autoclip.service
+## FAQ
 
-[Unit]
-Description=AutoClip Video Processing System
-After=network.target redis.service
+<details>
+<summary>Is it free? Do I need an API key?</summary>
 
-[Service]
-Type=forking
-User=autoclip
-WorkingDirectory=/opt/autoclip
-ExecStart=/opt/autoclip/start_autoclip.sh
-ExecStop=/opt/autoclip/stop_autoclip.sh
-Restart=always
+The app is free and MIT-licensed. Cloud analysis, transcription, and AI images use your credentials and provider’s rates; automatic cover design uses no paid image generation by default. Ollama / LM Studio need no cloud key but require suitable hardware. Direct publishing needs your own Bilibili or [Upload-Post](https://www.upload-post.com) account.
 
-[Install]
-WantedBy=multi-user.target
-```
+</details>
 
-## 📈 Roadmap
+<details>
+<summary>Are my videos uploaded?</summary>
 
-### Coming Soon
+Cutting and rendering run on your computer. Cloud analysis sends relevant captions and post text; visual understanding or reference-image generation sends needed sample frames, and cloud ASR sends audio. Local analysis and transcription need no corresponding cloud API. Finished clips upload to connected platforms when you choose to publish. Analytics and error reports can be disabled in Settings. See [privacy](docs/PRIVACY.en.md).
 
-- [ ] **Bilibili Upload Feature**: Automatic upload of clipped videos to Bilibili
-  with multi-account management
-- [ ] **Subtitle Editing Feature**: Visual subtitle editor and synchronization functionality
-- [ ] **Multi-language Support**: Support for more language video processing
-- [ ] **Cloud Storage**: Integrate cloud storage services
-- [ ] **Batch Processing**: Support for batch video processing
-- [ ] **API Open**: Provide public API interface
-- [ ] **Mobile App**: Develop mobile application
+</details>
 
-### Long-term Planning
+<details>
+<summary>What videos work best?</summary>
 
-- [ ] **AI Model Optimization**: Integrate more AI models
-- [ ] **Real-time Collaboration**: Support multi-user collaboration
-- [ ] **Plugin System**: Support third-party plugins
-- [ ] **Enterprise Edition**: Enterprise-level features and services
+Interviews, podcasts, courses, and talking-head footage are the main validated use cases. Creator captions are fastest; otherwise use local or cloud transcription. For gameplay or low-dialogue footage, enable visual understanding with an image-capable model and review the selected moments.
 
-## 🤝 Contributing
+</details>
 
-We welcome all forms of contributions! Whether it's code contributions,
-documentation improvements, issue reports, or feature suggestions.
+<details>
+<summary>Why were no clips generated?</summary>
 
-### How to Contribute
+Check the failed stage: captions/transcription, model connection, FFmpeg, disk space, and platform eligibility. YouTube long-form requires complete clips of at least 180 seconds; use Shorts or Bilibili for shorter footage. If it still fails, include the version from `autoclip --version`, OS, source duration, model, and sanitized logs in [known issues](https://github.com/zhouxiaoka/autoclip/issues/96).
 
-1. **Fork** the project to your GitHub account
-2. Clone your Fork to local:
+</details>
 
-   ```bash
-   git clone https://github.com/zhouxiaoka/autoclip.git
-   cd autoclip
-   ```
+[Full troubleshooting](docs/FAQ.en.md) · [Known issues](https://github.com/zhouxiaoka/autoclip/issues/96)
 
-3. Create feature branch:
+<a id="documentation"></a>
 
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
+## Documentation
 
-4. Develop and test
-5. Commit changes:
+| You want | Docs |
+| --- | --- |
+| Install and first clips | [Installation](docs/USER_INSTALLATION_GUIDE.en.md) |
+| Self-host and automation | [Docker](docs/DOCKER.en.md) · [CLI / MCP](docs/CLI_AND_MCP.md) (Chinese) · [Agent skill](skills/autoclip/SKILL.md) (Chinese) · [OpenCode](docs/OPENCODE.en.md) |
+| Models and troubleshooting | [Model setup](docs/MULTI_LLM_PROVIDER_GUIDE.md) (Chinese) · [FAQ](docs/FAQ.en.md) |
+| Versions, roadmap, privacy | [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md) (Chinese) · [Community board](docs/COMMUNITY_BOARD.md) (Chinese) · [Privacy](docs/PRIVACY.en.md) |
+| Research | [Research note #1: Pick the moment, not the effect](docs/research/2026-10-what-drives-views/article-en.md) · [中文](docs/research/2026-10-what-drives-views/article-zh.md) |
+| Contribute and translate | [Contributing](CONTRIBUTING.md) (Chinese) · [Translation maintenance](docs/i18n.md) (Chinese) |
 
-   ```bash
-   git add .
-   git commit -m 'feat: add amazing feature'
-   ```
+## Contribute
 
-6. Push branch:
+Fixes, clip samples, feedback, and translation improvements are welcome. If AutoClip helps you, a star is appreciated.
 
-   ```bash
-   git push origin feature/amazing-feature
-   ```
+- **Talk:** [GitHub Discussions](https://github.com/zhouxiaoka/autoclip/discussions) · [First-clip Q&A](https://github.com/zhouxiaoka/autoclip/discussions/128) · [Ideas](https://github.com/zhouxiaoka/autoclip/discussions/129)
+- **Bugs:** use the [issue form](https://github.com/zhouxiaoka/autoclip/issues/new/choose) with OS, version, model, steps, and redacted logs
+- **Partnerships:** [christine_zhouye@163.com](mailto:christine_zhouye@163.com)
 
-7. Create **Pull Request** on GitHub
+Maintained by one person. Replies are not instant; there is no live support or one-to-one deploy help.
 
-### Development Standards
+![Star History](https://api.star-history.com/svg?repos=zhouxiaoka/autoclip&type=Date)
 
-#### Code Standards
-
-- Backend: Follow PEP 8 Python code standards
-- Frontend: Use TypeScript, follow ESLint rules
-- Commit messages: Use conventional commit format (feat, fix, docs, style, refactor,
-  test, chore)
-
-#### Development Process
-
-1. Ensure all tests pass
-2. Add necessary test cases
-3. Update related documentation
-4. Ensure code quality checks pass
-
-#### Commit Message Format
-
-```text
-<type>(<scope>): <description>
-
-[optional body]
-
-[optional footer(s)]
-```
-
-Examples:
-
-- `feat(api): add video download endpoint`
-- `fix(ui): resolve upload modal display issue`
-- `docs(readme): update installation instructions`
-
-## ❓ FAQ
-
-### Installation and Startup Issues
-
-**Q: What to do when ports are occupied during startup?**
-A: Use the following commands to check and stop processes occupying ports:
-
-```bash
-# Check port usage
-lsof -i :8000  # Backend port
-lsof -i :3000  # Frontend port
-
-# Stop processes
-kill -9 <PID>
-```
-
-**Q: What to do when Redis connection fails?**
-A: Ensure Redis service is running:
-
-```bash
-# Check Redis status
-redis-cli ping
-
-# Start Redis service
-brew services start redis  # macOS
-sudo systemctl start redis-server  # Linux
-```
-
-**Q: What to do when frontend dependency installation fails?**
-A: Try clearing cache and reinstalling:
-
-```bash
-cd frontend
-rm -rf node_modules package-lock.json
-npm cache clean --force
-npm install
-```
-
-### Feature Usage Issues
-
-**Q: What to do when YouTube video download fails?**
-A:
-
-1. Check network connection
-2. Update yt-dlp: `pip install --upgrade yt-dlp`
-3. Try using browser cookies
-4. Check if video is available or requires login
-
-**Q: What to do when Bilibili video download fails?**
-A:
-
-1. Check account login status
-2. Update account cookies
-3. Check video permission settings
-4. Try using other accounts
-
-**Q: What to do when AI processing is slow?**
-A:
-
-1. Check API key configuration
-2. Adjust processing parameters (reduce chunk_size)
-3. Check network connection
-4. Consider using faster AI models
-
-**Q: When will Bilibili upload feature be available?**
-A: Bilibili upload feature is currently in development and is expected to be
-released in the next version. This feature will support:
-
-- Automatic upload of clipped videos to Bilibili
-- Multi-account management and switching
-- Batch upload and queue management
-- Upload progress monitoring
-
-**Q: When will subtitle editing feature be available?**
-A: Subtitle editing feature is currently in development and is expected to be
-released in the next version. This feature will support:
-
-- Visual subtitle editor
-- Subtitle timeline synchronization
-- Multi-language subtitle support
-- Subtitle format conversion
-
-### Performance Optimization
-
-**Q: How to improve processing speed?**
-A:
-
-1. Increase Celery Worker concurrency
-2. Use SSD storage
-3. Increase system memory
-4. Optimize video quality settings
-
-**Q: How to reduce storage space usage?**
-A:
-
-1. Regularly clean temporary files
-2. Compress output videos
-3. Delete unnecessary projects
-4. Use external storage
-
-## 📞 Support & Feedback
-
-### Get Help
-
-- **Issue Reports**: [GitHub Issues](https://github.com/zhouxiaoka/autoclip/issues)
-- **Feature Suggestions**: [GitHub Discussions](https://github.com/zhouxiaoka/autoclip/discussions)
-- **Bug Reports**: Please use GitHub Issues template
-- **Documentation**: [Project Documentation](docs/)
-
-### Contact
-
-For questions or suggestions, please contact us through:
-
-#### 💬 QQ
-
-![QQ QR Code](./qq_qr.jpg)
-
-#### 📱 Feishu
-
-![Feishu QR Code](./feishu_qr.jpg)
-
-#### 📧 Other Contact Methods
-
-- Submit a [GitHub Issue](https://github.com/zhouxiaoka/autoclip/issues)
-- Send email to: [christine_zhouye@163.com](mailto:christine_zhouye@163.com)
-- Add the above QQ or Feishu contact
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
-
-## 🙏 Acknowledgments
-
-Thanks to the following open source projects and services:
-
-### Core Technology Stack
-
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
-- [React](https://reactjs.org/) - User interface library
-- [Ant Design](https://ant.design/) - Enterprise-grade UI design language
-- [TypeScript](https://typescriptlang.org/) - JavaScript superset
-- [Celery](https://docs.celeryproject.org/) - Distributed task queue
-- [Redis](https://redis.io/) - In-memory data structure store
-
-### Video Processing
-
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - YouTube video download tool
-- [FFmpeg](https://ffmpeg.org/) - Audio and video processing framework
-
-### AI Services
-
-- [Qwen](https://tongyi.aliyun.com/) - Alibaba Cloud large language model service
-- [DashScope](https://dashscope.aliyun.com/) - Alibaba Cloud AI service platform
-
-### Development Tools
-
-- [Vite](https://vitejs.dev/) - Frontend build tool
-- [Zustand](https://github.com/pmndrs/zustand) - State management library
-- [Pydantic](https://pydantic-docs.helpmanual.io/) - Data validation library
-
-### Special Thanks
-
-- All developers contributing to the open source community
-- Users providing feedback and suggestions
-- Community members participating in testing and code contributions
-
----
-
-## If this project helps you, please give us a ⭐ Star
-
-[![Star History Chart](https://api.star-history.com/svg?repos=zhouxiaoka/autoclip&type=Date)](https://star-history.com/#zhouxiaoka/autoclip&Date)
-
-Made with ❤️ by AutoClip Team
-
-⭐ If you find it useful, please give us a Star!
+Thanks to FastAPI, React, Tauri, FFmpeg, yt-dlp, Whisper, FunASR, and every contributor. [MIT License](LICENSE).

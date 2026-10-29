@@ -3,10 +3,14 @@
 包含数据库连接、会话管理和依赖注入
 """
 
+import logging
 import os
-from sqlalchemy import create_engine
+import sqlite3
+from contextlib import contextmanager
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import StaticPool, NullPool
+from sqlalchemy.engine import make_url
 from typing import Generator
 from backend.models.base import Base
 
@@ -25,27 +29,54 @@ if DATABASE_URL == "sqlite:///autoclip.db":
         # 如果导入失败，保持默认值
         pass
 
-# 创建数据库引擎
-if "sqlite" in DATABASE_URL:
-    # SQLite配置
-    engine = create_engine(
-        DATABASE_URL,
-        connect_args={
-            "check_same_thread": False,
-            "timeout": 30
-        },
-        poolclass=StaticPool,
+def is_memory_sqlite(database_url: str) -> bool:
+    url = make_url(database_url)
+    return url.get_backend_name() == 'sqlite' and (not url.database or url.database == ':memory:' or url.query.get('mode') == 'memory')
+
+
+def sqlite_engine_kwargs(database_url: str) -> dict:
+    return {'poolclass': StaticPool if is_memory_sqlite(database_url) else NullPool}
+
+
+# File-backed databases use separate connections; in-memory databases keep one.
+def create_database_engine(database_url):
+    url = make_url(database_url)
+    if url.get_backend_name() != 'sqlite':
+        return create_engine(database_url, pool_pre_ping=True, pool_recycle=300, echo=False)
+    in_memory = is_memory_sqlite(database_url)
+    database_engine = create_engine(
+        database_url,
+        connect_args={'check_same_thread': False, 'timeout': 30},
+        **sqlite_engine_kwargs(database_url),
         pool_pre_ping=True,
-        echo=False  # 设置为True可以看到SQL语句
+        echo=False,
     )
-else:
-    # PostgreSQL配置
-    engine = create_engine(
-        DATABASE_URL,
-        pool_pre_ping=True,
-        pool_recycle=300,
-        echo=False
-    )
+    if not in_memory:
+        @event.listens_for(database_engine, 'connect')
+        def sqlite_pragmas(dbapi_connection, _record):
+            cursor = dbapi_connection.cursor()
+            try:
+                # Even reading journal_mode can encounter an exclusive legacy lock.
+                # Defer optional WAL setup and leave normal queries their busy timeout.
+                cursor.execute('PRAGMA busy_timeout=0')
+                try:
+                    mode = cursor.execute('PRAGMA journal_mode').fetchone()[0]
+                    if str(mode).lower() != 'wal':
+                        cursor.execute('PRAGMA journal_mode=WAL').fetchone()
+                except sqlite3.OperationalError as error:
+                    code = getattr(error, 'sqlite_errorcode', 0) & 0xff
+                    if code not in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED, sqlite3.SQLITE_READONLY):
+                        raise
+                    logging.getLogger(__name__).info('SQLite WAL initialization deferred (code=%s)', code)
+            finally:
+                try:
+                    cursor.execute('PRAGMA busy_timeout=30000')
+                finally:
+                    cursor.close()
+    return database_engine
+
+
+engine = create_database_engine(DATABASE_URL)
 
 # 创建会话工厂
 SessionLocal = sessionmaker(
@@ -65,9 +96,35 @@ def get_db() -> Generator[Session, None, None]:
     finally:
         db.close()
 
+
+@contextmanager
+def session_scope() -> Generator[Session, None, None]:
+    """短生命周期会话。不要用 next(get_db())：生成器被丢掉时 finally 不会马上执行，连接不归还。"""
+    db = SessionLocal()
+    try:
+        yield db
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        db.close()
+
 def create_tables():
-    """创建所有数据库表"""
+    """创建所有数据库表，并清洗项目表里当前代码无法识别的枚举值。"""
     Base.metadata.create_all(bind=engine)
+    _normalize_project_enums()
+
+
+def _normalize_project_enums():
+    try:
+        from backend.core.project_enum_migration import normalize_legacy_project_enums
+        normalize_legacy_project_enums(engine)
+    except Exception:
+        logging.getLogger(__name__).exception("清洗项目枚举旧值失败")
+
 
 def drop_tables():
     """删除所有数据库表"""
